@@ -1,0 +1,104 @@
+diff -urN minicom-2.3.orig/src/config.c minicom-2.3/src/config.c
+--- minicom-2.3.orig/src/config.c	2013-05-05 20:59:12.000000000 -0400
++++ minicom-2.3/src/config.c	2013-05-05 20:59:53.000000000 -0400
+@@ -1380,6 +1380,14 @@
+    };
+ #define NR_SPEEDS (sizeof(speeds) / sizeof(speeds[0]))
+ 
++int speed_valid(unsigned int speed)
++{
++  unsigned i;
++  for (i = 0; i < NR_SPEEDS; ++i)
++    if (speed == speeds[i])
++      return 1;
++  return 0;
++}
+ 
+ /*
+  * Ask user for Baudrate, Bits and Parity
+diff -urN minicom-2.3.orig/src/minicom.c minicom-2.3/src/minicom.c
+--- minicom-2.3.orig/src/minicom.c	2013-05-05 20:59:12.000000000 -0400
++++ minicom-2.3/src/minicom.c	2013-05-05 21:02:16.000000000 -0400
+@@ -839,6 +839,8 @@
+   printf(_(
+     "Usage: %s [OPTION]... [configuration]\n"
+     "A terminal program for Linux and other unix-like systems.\n\n"
++    "  -b, --baudrate         : set baudrate (ignore the value from config)\n"
++    "  -D, --device           : set device name (ignore the value from config)\n"
+     "  -s, --setup            : enter setup mode (only as root)\n"
+     "  -o, --noinit           : do not initialize modem & lockfiles at startup\n"
+     "  -m, --metakey          : use meta or alt key for commands\n"
+@@ -905,6 +907,8 @@
+   int env_args;			/* Number of args in env. variable */
+   char *cmd_dial;		/* Entry from the command line. */
+   int alt_code = 0;		/* Type of alt key */
++  char *cmdline_baudrate = NULL;/* Baudrate given on the command line via -b */
++  char *cmdline_device = NULL;  /* Device/Port given on the command line via -D */
+   char pseudo[64];
+   /* char* console_encoding = getenv ("LC_CTYPE"); */
+ 
+@@ -930,6 +934,8 @@
+     { "version",     no_argument,       NULL, 'v' },
+     { "wrap",        no_argument,       NULL, 'w' },
+     { "disabletime", no_argument,       NULL, 'T' },
++    { "baudrate",    required_argument, NULL, 'b' },
++    { "device",      required_argument, NULL, 'D' },
+     { NULL, 0, NULL, 0 }
+   };
+ 
+@@ -1031,7 +1037,7 @@
+ 
+   do {
+     /* Process options with getopt */
+-    while ((c = getopt_long(argk, args, "v78zhlLsomMbwTc:a:t:d:p:C:S:",
++    while ((c = getopt_long(argk, args, "v78zhlLsomMb:wTc:a:t:d:p:C:S:D:",
+                             long_options, NULL)) != EOF)
+       switch(c) {
+ 	case 'v':
+@@ -1159,6 +1165,12 @@
+         case 'T': /* disable online time */
+           disable_online_time = 1;
+           break;
++	case 'b':
++	  cmdline_baudrate = optarg;
++	  break;
++	case 'D':
++	  cmdline_device = optarg;
++	  break;
+         default:
+           usage(env_args, optind, mc);
+           break;
+@@ -1253,6 +1265,22 @@
+   addlf      = strcasecmp(P_ADDLINEFEED, "yes") == 0;
+   local_echo = strcasecmp(P_LOCALECHO,   "yes") == 0;
+ 
++  /* After reading in the config via read_parms we can possibly overwrite
++   * the baudrate with a value given at the cmdline */
++  if (cmdline_baudrate) {
++    unsigned int b = strtol(cmdline_baudrate, (char **)NULL, 0);
++    if (speed_valid(b)) {
++      snprintf(P_BAUDRATE, sizeof(P_BAUDRATE), "%d", b);
++      P_BAUDRATE[sizeof(P_BAUDRATE) - 1] = 0;
++    }
++  }
++
++  /* New we can also overwrite the device name, if one was given */
++  if (cmdline_device) {
++    strncpy(P_PORT, cmdline_device, sizeof(P_PORT));
++    P_PORT[sizeof(P_PORT) - 1] = 0;
++  }
++
+   stdwin = NULL; /* It better be! */
+ 
+   /* Reset colors if we don't use 'em. */
+diff -urN minicom-2.3.orig/src/minicom.h minicom-2.3/src/minicom.h
+--- minicom-2.3.orig/src/minicom.h	2013-05-05 20:59:12.000000000 -0400
++++ minicom-2.3/src/minicom.h	2013-05-05 20:59:53.000000000 -0400
+@@ -172,6 +172,7 @@
+ int  domacsave(void);	/* fmg - need it */
+ int  loadconv(char *);	/* jl */
+ int  saveconv(char *);	/* jl */
++int  speed_valid(unsigned int);
+ 
+ /* Prototypes from file: common.c */
+ char *pfix_home( char *s);
