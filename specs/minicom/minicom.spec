@@ -1,7 +1,7 @@
 Summary: A text-based modem control and terminal emulation program
 Name: minicom
 Version: 2.3
-Release: 6.1%{?dist}
+Release: 6.1.1%{?dist}
 URL: http://alioth.debian.org/projects/minicom/
 License: GPLv2+
 Group: Applications/Communications
@@ -21,6 +21,7 @@ Patch8: minicom-2.3-rh.patch
 Patch9: minicom-2.3-esc.patch
 Patch10: minicom-2.3-staticbuf.patch
 Patch11: minicom-2.3-getline.patch
+Patch41: minicom-2.3-baud-dev-cmdline.patch
 
 %description
 Minicom is a simple text-based modem control and terminal emulation
@@ -39,6 +40,7 @@ language, and other features.
 %patch9 -p1 -b .esc
 %patch10 -p1 -b .staticbuf
 %patch11 -p1 -b .getline
+%patch41 -p1 -b .baud-dev-cmdline
 
 cp -pr doc doc_
 rm -f doc_/Makefile*
@@ -70,6 +72,14 @@ rm -rf $RPM_BUILD_ROOT
 %{_mandir}/man1/*
 
 %changelog
+* Sun May 5 2013 Evgueni Souleimanov <esoule@100500.ca> - 2.3-6.1.1
+- Add -b / --baudrate command line option to set baudrate from the
+  command line (ignoring the value from config); backported from minicom
+  2.4.
+- Add -D / --device command line option to set device name from the
+  command line (ignoring the value from config); backported from minicom
+  2.4.
+
 * Mon Nov 30 2009 Dennis Gregorovic <dgregor@redhat.com> - 2.3-6.1
 - Rebuilt for RHEL 6
 
