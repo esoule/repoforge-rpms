@@ -24,7 +24,7 @@ Summary: The VIM editor
 URL:     http://www.vim.org/
 Name: vim
 Version: %{baseversion}.%{beta}%{patchlevel}
-Release: 1%{?dist}
+Release: 1.1%{?dist}
 License: Vim
 Group: Applications/Editors
 Source0: ftp://ftp.vim.org/pub/vim/unix/vim-%{baseversion}%{?beta}%{?CVSDATE}.tar.bz2
@@ -797,7 +797,6 @@ Requires: desktop-file-utils
 BuildRequires: desktop-file-utils >= %{desktop_file_utils_version}
 %endif
 Epoch: 2
-Conflicts: filesystem < 3
 
 %description
 VIM (VIsual editor iMproved) is an updated and improved version of the
@@ -811,7 +810,6 @@ Group: Applications/Editors
 Conflicts: man-pages-fr < 0.9.7-14
 Conflicts: man-pages-it < 0.3.0-17
 Conflicts: man-pages-pl < 0.24-2
-Requires: %{name}-filesystem
 
 %description common
 VIM (VIsual editor iMproved) is an updated and improved version of the
@@ -868,14 +866,6 @@ Install the vim-enhanced package if you'd like to use a version of the
 VIM editor which includes recently added enhancements like
 interpreters for the Python and Perl scripting languages.  You'll also
 need to install the vim-common package.
-
-%package filesystem
-Summary: VIM filesystem layout
-Group: Applications/Editors
-
-%Description filesystem
-This package provides some directories which are required by other
-packages that add vim files, p.e.  additional syntax files or filetypes.
 
 %package X11
 Summary: The VIM version of the vi editor for the X Window System
@@ -1661,7 +1651,7 @@ export CXXFLAGS="$RPM_OPT_FLAGS -D_GNU_SOURCE -D_FILE_OFFSET_BITS=64 -D_FORTIFY_
   --enable-perlinterp \
   --disable-tclinterp --with-x=yes \
   --enable-xim --enable-multibyte \
-  --with-tlib=ncurses \
+  --with-tlib=tinfo \
   --enable-gtk2-check --enable-gui=gtk2 \
   --with-compiledby="<bugzilla@redhat.com>" --enable-cscope \
   --with-modified-by="<bugzilla@redhat.com>" \
@@ -1692,7 +1682,7 @@ make clean
  --with-x=no \
  --enable-gui=no --exec-prefix=%{_prefix} --enable-multibyte \
  --enable-cscope --with-modified-by="<bugzilla@redhat.com>" \
- --with-tlib=ncurses \
+ --with-tlib=tinfo \
  --with-compiledby="<bugzilla@redhat.com>" \
 %if "%{withnetbeans}" == "1"
   --enable-netbeans \
@@ -1725,7 +1715,7 @@ perl -pi -e "s/\/etc\/vimrc/\/etc\/virc/"  os_unix.h
   --disable-selinux \
 %endif
   --disable-pythoninterp --disable-perlinterp --disable-tclinterp \
-  --with-tlib=ncurses --enable-gui=no --disable-gpm --exec-prefix=/ \
+  --with-tlib=tinfo --enable-gui=no --disable-gpm --exec-prefix=/ \
   --with-compiledby="<bugzilla@redhat.com>" \
   --with-modified-by="<bugzilla@redhat.com>"
 
@@ -1733,6 +1723,7 @@ make VIMRCLOC=/etc VIMRUNTIMEDIR=/usr/share/vim/%{vimdir} %{?_smp_mflags}
 
 %install
 rm -rf $RPM_BUILD_ROOT
+mkdir -p $RPM_BUILD_ROOT/bin
 mkdir -p $RPM_BUILD_ROOT/%{_bindir}
 mkdir -p $RPM_BUILD_ROOT/%{_datadir}/%{name}/vimfiles/{after,autoload,colors,compiler,doc,ftdetect,ftplugin,indent,keymap,lang,plugin,print,spell,syntax,tutor}
 mkdir -p $RPM_BUILD_ROOT/%{_datadir}/%{name}/vimfiles/after/{autoload,colors,compiler,doc,ftdetect,ftplugin,indent,keymap,lang,plugin,print,spell,syntax,tutor}
@@ -1748,11 +1739,11 @@ rm -f README*.info
 
 
 cd src
-make install DESTDIR=$RPM_BUILD_ROOT BINDIR=%{_bindir} VIMRCLOC=/etc VIMRUNTIMEDIR=/usr/share/vim/%{vimdir}
-make installgtutorbin  DESTDIR=$RPM_BUILD_ROOT BINDIR=%{_bindir} VIMRCLOC=/etc VIMRUNTIMEDIR=/usr/share/vim/%{vimdir}
+make install DESTDIR=$RPM_BUILD_ROOT BINDIR=/bin VIMRCLOC=/etc VIMRUNTIMEDIR=/usr/share/vim/%{vimdir}
+make installgtutorbin  DESTDIR=$RPM_BUILD_ROOT BINDIR=/bin VIMRCLOC=/etc VIMRUNTIMEDIR=/usr/share/vim/%{vimdir}
+mv $RPM_BUILD_ROOT/bin/xxd $RPM_BUILD_ROOT/%{_bindir}/xxd
+mv $RPM_BUILD_ROOT/bin/gvimtutor $RPM_BUILD_ROOT/%{_bindir}/gvimtutor
 mkdir -p $RPM_BUILD_ROOT%{_datadir}/icons/hicolor/{16x16,32x32,48x48,64x64}/apps
-install -m755 vim $RPM_BUILD_ROOT%{_bindir}/vi
-install -m755 enhanced-vim $RPM_BUILD_ROOT%{_bindir}/vim
 install -m755 gvim $RPM_BUILD_ROOT%{_bindir}/gvim
 install -p -m644 %{SOURCE7} \
    $RPM_BUILD_ROOT%{_datadir}/icons/hicolor/16x16/apps/gvim.png
@@ -1762,12 +1753,17 @@ install -p -m644 %{SOURCE9} \
    $RPM_BUILD_ROOT%{_datadir}/icons/hicolor/48x48/apps/gvim.png
 install -p -m644 %{SOURCE10} \
    $RPM_BUILD_ROOT%{_datadir}/icons/hicolor/64x64/apps/gvim.png
+install -m755 enhanced-vim $RPM_BUILD_ROOT%{_bindir}/vim
 
 ( cd $RPM_BUILD_ROOT
-  ln -sf vi ./%{_bindir}/rvi
-  ln -sf vi ./%{_bindir}/rview
-  ln -sf vi ./%{_bindir}/view
-  ln -sf vi ./%{_bindir}/ex
+  mv ./bin/vimtutor ./%{_bindir}/vimtutor
+  mv ./bin/vim ./bin/vi
+  rm -f ./bin/rvim
+  ln -sf vi ./bin/ex
+  ln -sf vi ./bin/rvi
+  ln -sf vi ./bin/rview
+  ln -sf vi ./bin/view
+  ln -sf vim ./%{_bindir}/ex
   ln -sf vim ./%{_bindir}/rvim
   ln -sf vim ./%{_bindir}/vimdiff
   perl -pi -e "s,$RPM_BUILD_ROOT,," .%{_mandir}/man1/vim.1 .%{_mandir}/man1/vimtutor.1
@@ -1913,8 +1909,26 @@ rm -rf $RPM_BUILD_ROOT
 %doc runtime/docs
 %doc Changelog.rpm
 %dir %{_datadir}/%{name}
-%{_datadir}/%{name}/vimfiles/template.spec
 %dir %{_datadir}/%{name}/%{vimdir}
+%dir %{_datadir}/%{name}/vimfiles
+%dir %{_datadir}/%{name}/vimfiles/after
+%dir %{_datadir}/%{name}/vimfiles/after/*
+%dir %{_datadir}/%{name}/vimfiles/autoload
+%dir %{_datadir}/%{name}/vimfiles/colors
+%dir %{_datadir}/%{name}/vimfiles/compiler
+%dir %{_datadir}/%{name}/vimfiles/doc
+%ghost %{_datadir}/%{name}/vimfiles/doc/tags
+%dir %{_datadir}/%{name}/vimfiles/ftdetect
+%dir %{_datadir}/%{name}/vimfiles/ftplugin
+%dir %{_datadir}/%{name}/vimfiles/indent
+%dir %{_datadir}/%{name}/vimfiles/keymap
+%dir %{_datadir}/%{name}/vimfiles/lang
+%dir %{_datadir}/%{name}/vimfiles/plugin
+%dir %{_datadir}/%{name}/vimfiles/print
+%dir %{_datadir}/%{name}/vimfiles/spell
+%dir %{_datadir}/%{name}/vimfiles/syntax
+%dir %{_datadir}/%{name}/vimfiles/tutor
+%{_datadir}/%{name}/vimfiles/template.spec
 %{_datadir}/%{name}/%{vimdir}/autoload
 %{_datadir}/%{name}/%{vimdir}/colors
 %{_datadir}/%{name}/%{vimdir}/compiler
@@ -2034,43 +2048,23 @@ rm -rf $RPM_BUILD_ROOT
 %files minimal
 %defattr(-,root,root)
 %config(noreplace) %{_sysconfdir}/virc
-%{_bindir}/ex
-%{_bindir}/vi
-%{_bindir}/view
-%{_bindir}/rvi
-%{_bindir}/rview
+/bin/ex
+/bin/vi
+/bin/view
+/bin/rvi
+/bin/rview
 
 %files enhanced
 %defattr(-,root,root)
 %{_bindir}/vim
 %{_bindir}/rvim
 %{_bindir}/vimdiff
+%{_bindir}/ex
 %{_bindir}/vimtutor
 %config(noreplace) %{_sysconfdir}/profile.d/vim.*
 %{_mandir}/man1/rvim.*
 %{_mandir}/man1/vimdiff.*
 %{_mandir}/man1/vimtutor.*
-
-%files filesystem
-%defattr(-,root,root)
-%dir %{_datadir}/%{name}/vimfiles
-%dir %{_datadir}/%{name}/vimfiles/after
-%dir %{_datadir}/%{name}/vimfiles/after/*
-%dir %{_datadir}/%{name}/vimfiles/autoload
-%dir %{_datadir}/%{name}/vimfiles/colors
-%dir %{_datadir}/%{name}/vimfiles/compiler
-%dir %{_datadir}/%{name}/vimfiles/doc
-%ghost %{_datadir}/%{name}/vimfiles/doc/tags
-%dir %{_datadir}/%{name}/vimfiles/ftdetect
-%dir %{_datadir}/%{name}/vimfiles/ftplugin
-%dir %{_datadir}/%{name}/vimfiles/indent
-%dir %{_datadir}/%{name}/vimfiles/keymap
-%dir %{_datadir}/%{name}/vimfiles/lang
-%dir %{_datadir}/%{name}/vimfiles/plugin
-%dir %{_datadir}/%{name}/vimfiles/print
-%dir %{_datadir}/%{name}/vimfiles/spell
-%dir %{_datadir}/%{name}/vimfiles/syntax
-%dir %{_datadir}/%{name}/vimfiles/tutor
 
 %files X11
 %defattr(-,root,root)
@@ -2091,6 +2085,12 @@ rm -rf $RPM_BUILD_ROOT
 %{_datadir}/icons/hicolor/*/apps/*
 
 %changelog
+* Tue May 7 2013 Evgueni Souleimanov <esoule@100500.ca> 7.3.712-1.1
+- remove vim-filesystem package to match CentOS 6 packaging
+- compile against libtinfo instead of libncurses because tgetent()
+  is located inside libtinfo on CentOS 6.
+- move executable file paths to match CentOS 6 packaging
+
 * Mon Nov 12 2012 Karsten Hopp <karsten@redhat.com> 7.3.712-1
 - patchlevel 712
 
