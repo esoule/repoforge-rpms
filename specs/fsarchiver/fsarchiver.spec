@@ -1,6 +1,10 @@
+
+%{?el5:%define _without_lzo 1}
+%{?_without_lzo:%define _disable_lzo_flag --disable-lzo}
+
 Name:		fsarchiver
 Version:	0.6.17
-Release:	1%{?dist}
+Release:	2%{?dist}
 Summary:	Safe and flexible file-system backup/deployment tool
 
 Group:		Applications/Archiving
@@ -9,15 +13,20 @@ URL:		http://www.fsarchiver.org
 Source0:  	http://downloads.sourceforge.net/%{name}/%{name}-%{version}.tar.gz      
 BuildRoot:	%{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 
+%if 0%{?el6}
 BuildRequires:	e2fsprogs-devel => 1.41.4
 BuildRequires:	libuuid-devel
 BuildRequires:	libblkid-devel
+%endif
+%if 0%{?el5}
+BuildRequires:	e2fsprogs-devel
+%endif
 BuildRequires:	e2fsprogs
 BuildRequires:	libattr-devel
 BuildRequires:	libgcrypt-devel
 BuildRequires:	zlib-devel
 BuildRequires:	bzip2-devel
-BuildRequires:	lzo-devel
+%{!?_without_lzo:BuildRequires: lzo-devel}
 BuildRequires:	xz-devel
 
 %description
@@ -33,7 +42,7 @@ is corrupt, you just lose the current file, not the whole archive.
 %setup -q
 
 %build
-%configure
+%configure %{?_disable_lzo_flag}
 make %{?_smp_mflags}
 
 
@@ -53,3 +62,10 @@ rm -rf $RPM_BUILD_ROOT
 %doc COPYING README THANKS NEWS
 
 %changelog
+* Wed May 8 2013 Evgueni Souleimanov <esoule@100500.ca> - 0.6.17-2
+- build on el5 without lzo
+- libuuid and libblkid are part of e2fsprogs on el5
+
+* Wed May 8 2013 Evgueni Souleimanov <esoule@100500.ca> - 0.6.17-1
+- import initial release from upstream
+
