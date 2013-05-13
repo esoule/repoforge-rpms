@@ -14,7 +14,7 @@
 Summary:	Network traffic analyzer
 Name:		wireshark
 Version:	1.8.6
-Release:	4%{?dist}
+Release:	4.1%{?dist}
 License:	GPL+
 Group:		Applications/Internet
 Source0:	http://wireshark.org/download/src/%{name}-%{version}.tar.bz2
@@ -82,7 +82,6 @@ Requires:	adns
 %package	gnome
 Summary:	Gnome desktop integration for wireshark
 Group:		Applications/Internet
-Requires:	gtk3
 Requires:	wireshark = %{version}-%{release}
 Requires:	xdg-utils
 %if %{with_GeoIP}
@@ -161,9 +160,9 @@ export LDFLAGS="$LDFLAGS -pie"
    --with-gnu-ld \
    --with-pic \
 %if %{with_gtk2}
-   --with-gtk2 \
+   --with-gtk3=no \
 %else
-   --with-gtk3 \
+   --with-gtk3=yes \
 %endif
 %if %{with_adns}
    --with-adns \
@@ -370,6 +369,9 @@ gtk-update-icon-cache %{_datadir}/icons/hicolor &>/dev/null || :
 %{_datadir}/aclocal/*
 
 %changelog
+* Sun May 12 2013 Evgueni Souleimanov <esoule@100500.ca> 1.8.6-4.1
+- on el6, even with with_gtk2 set, wireshark-gnome required gtk3
+
 * Wed Mar 27 2013 Peter Hatina <phatina@redhat.com> 1.8.6-4
 - fix capture crash (#894753)
 
