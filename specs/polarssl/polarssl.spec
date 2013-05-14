@@ -1,6 +1,6 @@
 Name:           polarssl
 Version:        1.2.7
-Release:        1%{?dist}
+Release:        1.1%{?dist}
 Summary:        Light-weight cryptographic and SSL/TLS library
 
 Group:          System Environment/Libraries
@@ -48,7 +48,7 @@ make %{?_smp_mflags} all apidoc
 
 
 %check
-ctest --output-on-failure
+LD_LIBRARY_PATH=$PWD/library ctest --output-on-failure
 
 
 %install
@@ -76,6 +76,13 @@ mv $RPM_BUILD_ROOT%{_bindir} $RPM_BUILD_ROOT%{_libexecdir}/polarssl
 
 
 %changelog
+* Mon May 13 2013 Evgueni Souleimanov <esoule@100500.ca> 1.2.7-1.1
+- Fix test failures on el6
+  - Details: pass the path to library directory via
+    LD_LIBRARY_PATH to ctest, so that test
+    sub-programs can run and load libpolarssl.so.1
+    located in ./library subdirectory.
+
 * Wed Apr 17 2013 Peter Robinson <pbrobinson@fedoraproject.org> 1.2.7-1
 - Update 1.2.7 (Fix FTBFS on ARM), cleanup SPEC
 
