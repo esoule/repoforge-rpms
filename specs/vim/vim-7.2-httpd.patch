@@ -1,0 +1,21 @@
+diff -up vim72/runtime/filetype.vim.663753 vim72/runtime/filetype.vim
+--- vim72/runtime/filetype.vim.663753	2012-02-17 13:17:36.771637370 +0100
++++ vim72/runtime/filetype.vim	2012-02-17 13:19:30.305638129 +0100
+@@ -111,7 +111,7 @@ au BufNewFile,BufRead proftpd.conf*		cal
+ 
+ " Apache config file
+ au BufNewFile,BufRead .htaccess			 setf apache
+-au BufNewFile,BufRead httpd.conf*,srm.conf*,access.conf*,apache.conf*,apache2.conf*,/etc/apache2/*.conf*,auth_mysql.conf*,auth_pgsql.conf*,ssl.conf*,perl.conf*,php.conf*,python.conf*,squirrelmail.conf* call s:StarSetf('apache')
++au BufNewFile,BufRead httpd.conf*,srm.conf*,access.conf*,apache.conf*,apache2.conf*,/etc/httpd/conf.d/*.conf*,auth_mysql.conf*,auth_pgsql.conf*,ssl.conf*,perl.conf*,php.conf*,python.conf*,squirrelmail.conf* call s:StarSetf('apache')
+ 
+ " XA65 MOS6510 cross assembler
+ au BufNewFile,BufRead *.a65			setf a65
+@@ -2285,7 +2285,7 @@ au StdinReadPost * if !did_filetype() |
+ " like are used.
+ 
+ " More Apache files.
+-au BufNewFile,BufRead /etc/apache2/conf.*/*,/etc/apache2/sites-*/*,/etc/apache2/mods-*/*		call s:StarSetf('apache')
++au BufNewFile,BufRead /etc/httpd/conf.*/*,/etc/httpd/sites-*/*,/etc/httpd/mods-*/*		call s:StarSetf('apache')
+ 
+ " Asterisk config file
+ au BufNewFile,BufRead *asterisk/*.conf*		call s:StarSetf('asterisk')
