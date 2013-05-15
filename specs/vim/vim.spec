@@ -24,7 +24,7 @@ Summary: The VIM editor
 URL:     http://www.vim.org/
 Name: vim
 Version: %{baseversion}.%{beta}%{patchlevel}
-Release: 1.8%{?dist}
+Release: 1.8.1%{?dist}
 License: Vim and GPLv2+ and BSD and LGPLv2+ and Open Publication
 Group: Applications/Editors
 Source0: ftp://ftp.vim.org/pub/vim/unix/vim-%{baseversion}%{?beta}%{?CVSDATE}.tar.bz2
@@ -493,6 +493,9 @@ Patch3012: vim72-rh514717.patch
 Patch3013: vim-7.2-629568.patch
 # bugzila 663753:
 Patch3014: vim-7.2-httpd.patch
+
+# Update git syntax from vim-7.3
+Patch5000: vim-7.2-git-syntax.patch
 
 Buildroot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 BuildRequires: python-devel ncurses-devel gettext perl-devel
@@ -1047,6 +1050,8 @@ perl -pi -e "s,bin/nawk,bin/awk,g" runtime/tools/mve.awk
 %patch3013 -p1
 %patch3014 -p1
 
+%patch5000 -p1
+
 cp -f %{SOURCE15} runtime/syntax/forth.vim
 cp -f %{SOURCE16} runtime/plugin/netrwPlugin.vim
 cp -f %{SOURCE17} runtime/plugin/gzip.vim
@@ -1491,6 +1496,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_datadir}/icons/hicolor/*/apps/*
 
 %changelog
+* Tue May 14 2013 Evgueni Souleimanov <esoule@100500.ca> 7.2.411-1.8.1
+- update git syntax highlighting from vim-7.3
+
 * Fri Feb 17 2012 Karsten Hopp <karsten@redhat.com> 7.2.411-1.8
 - avoid multilib conflict with compressed text files (gzip -n)
 
