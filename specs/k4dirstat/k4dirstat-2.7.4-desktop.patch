@@ -1,0 +1,27 @@
+From ee6a73f0b9400955dbb12277d12d007de415a2fa Mon Sep 17 00:00:00 2001
+From: Evgueni Souleimanov <esoule@100500.ca>
+Date: Thu, 16 May 2013 21:12:33 -0400
+Subject: [PATCH] k4dirstat.desktop: terminate Categories list with semicolon
+
+Terminate Categories list with a semicolon, because it is a string list.
+Fixes the error reported by "desktop-file-validate" utility on el6:
+
+"error: value "Utility" for string list key "Categories" in group
+"Desktop Entry" does not have a semicolon (';') as trailing character"
+---
+ src/k4dirstat.desktop | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/k4dirstat.desktop b/src/k4dirstat.desktop
+index 4b75c2e..192a9de 100644
+--- a/src/k4dirstat.desktop
++++ b/src/k4dirstat.desktop
+@@ -12,4 +12,4 @@ Comment[de]=Verzeichnisstatistik und Platzverbrauch
+ Comment[hu]=Könyvtárstatisztikák és szabad hely
+ Terminal=false
+ MimeType=inode/directory;
+-Categories=Utility
++Categories=Utility;
+-- 
+1.7.11.3
+
