@@ -1,0 +1,12 @@
+diff -urNp a/krusader/Panel/panelfunc.cpp b/krusader/Panel/panelfunc.cpp
+--- a/krusader/Panel/panelfunc.cpp	2012-10-21 06:55:54.000000000 -0400
++++ b/krusader/Panel/panelfunc.cpp	2013-05-27 20:39:23.000000000 -0400
+@@ -954,7 +954,7 @@ void ListPanelFunc::runCommand(QString c
+     krOut<<cmd<<endl;
+     QString workdir = panel->virtualPath().isLocalFile() ?
+             panel->virtualPath().path() : QDir::homePath();
+-    if(!KRun::runCommand(cmd, krMainWindow, workdir))
++    if(!KRun::runCommand(cmd, krMainWindow))
+         KMessageBox::error(0, i18n("Could not start %1", cmd));
+ }
+ 
