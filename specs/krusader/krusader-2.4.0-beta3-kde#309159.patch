@@ -1,0 +1,77 @@
+commit 770fa41c1f8e76d91eb981ee56d972efe10dc667
+Author: Jan Lepper <jan_lepper@gmx.de>
+Date:   Tue Oct 30 22:15:43 2012 +0100
+
+    FIXED: [ 309159 ] Crash in video files preview on F3
+    remove unnecessary code that possibly
+     - causes infinite recursion
+     - uses an invalid KUrl object
+    BUG: 309159
+
+diff --git a/ChangeLog b/ChangeLog
+index d12914d..8986c11 100644
+--- a/ChangeLog
++++ b/ChangeLog
+@@ -1,3 +1,6 @@
++    FIXED: [ 309159 ] Crash in video files preview on F3
++
++
+ 2.4.0-beta3 "Single Step"
+ =========================
+ 
+diff --git a/krusader/KViewer/krviewer.cpp b/krusader/KViewer/krviewer.cpp
+index 428d114..fa0cebd 100644
+--- a/krusader/KViewer/krviewer.cpp
++++ b/krusader/KViewer/krviewer.cpp
+@@ -534,11 +534,6 @@ void KrViewer::refreshTab(PanelViewerBase* pvb)
+     if (!pvb->part())
+         return;
+ 
+-    //FIXME this belongs to PanelViewer
+-    if (!pvb->part()->url().equals(pvb->url(), KUrl::CompareWithoutTrailingSlash)) {
+-        pvb->setUrl(pvb->part()->url());
+-    }
+-
+     int ndx = tabBar.indexOf(pvb);
+     tabBar.setTabText(ndx, makeTabText(pvb));
+     tabBar.setTabIcon(ndx, makeTabIcon(pvb));
+diff --git a/krusader/KViewer/panelviewer.cpp b/krusader/KViewer/panelviewer.cpp
+index 42f7f3a..24ce2b3 100644
+--- a/krusader/KViewer/panelviewer.cpp
++++ b/krusader/KViewer/panelviewer.cpp
+@@ -214,9 +214,9 @@ KParts::ReadOnlyPart* PanelViewer::getDefaultPart(const KUrl &url, QString mimet
+ 
+ KParts::ReadOnlyPart* PanelViewer::openUrl(const KUrl &url, KrViewer::Mode mode)
+ {
+-    emit urlChanged(this, url);
+     closeUrl();
+     curl = url;
++    emit urlChanged(this, url);
+ 
+     KMimeType::Ptr mt = KMimeType::findByUrl(url);
+     QString mimetype = mt->name();
+@@ -328,9 +328,9 @@ QString PanelEditor::missingKPartMsg()
+ 
+ KParts::ReadOnlyPart* PanelEditor::openUrl(const KUrl &url, KrViewer::Mode mode)
+ {
+-    emit urlChanged(this, url);
+     closeUrl();
+     curl = url;
++    emit urlChanged(this, url);
+ 
+     KFileItem item = readFileInfo(url);
+     KIO::filesize_t fileSize = item.isNull() ? 0 : item.size();
+diff --git a/krusader/KViewer/panelviewer.h b/krusader/KViewer/panelviewer.h
+index 4fe844e..c1b76fb 100644
+--- a/krusader/KViewer/panelviewer.h
++++ b/krusader/KViewer/panelviewer.h
+@@ -42,9 +42,6 @@ public:
+     inline KUrl url() const {
+         return curl;
+     }
+-    inline void setUrl(KUrl url) {
+-        emit urlChanged(this, url); curl = url;
+-    }
+     inline KParts::ReadOnlyPart* part() const {
+         return cpart;
+     }
