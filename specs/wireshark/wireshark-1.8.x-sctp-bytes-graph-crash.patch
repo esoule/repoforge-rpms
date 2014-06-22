@@ -1,0 +1,15 @@
+diff --git a/ui/gtk/sctp_byte_graph_dlg.c b/ui/gtk/sctp_byte_graph_dlg.c
+index bf0aa5d..64485f3 100644
+--- a/ui/gtk/sctp_byte_graph_dlg.c
++++ b/ui/gtk/sctp_byte_graph_dlg.c
+@@ -1147,9 +1147,8 @@ on_button_release_event (GtkWidget *widget _U_, GdkEventButton *event, gpointer
+ 			tmptsn =(tsn_t*)(tsnlist->data);
+ 			tfirst = tsn->secs + tsn->usecs/1000000.0;
+ 
+-			while (tsnlist)
++			for (tsnlist = g_list_previous(tsnlist); tsnlist; tsnlist = g_list_previous(tsnlist))
+ 			{
+-				tsnlist = g_list_previous(tsnlist);
+ 				tsn = (tsn_t*) (tsnlist->data);
+ 				if (tsn->secs+tsn->usecs/1000000.0<x_value)
+ 				{

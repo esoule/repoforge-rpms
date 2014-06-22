@@ -1,0 +1,24 @@
+diff --git a/ui/gtk/airpcap_dlg.c b/ui/gtk/airpcap_dlg.c
+index 1451ec1..98cf3bd 100644
+--- a/ui/gtk/airpcap_dlg.c
++++ b/ui/gtk/airpcap_dlg.c
+@@ -1592,13 +1592,13 @@ on_advanced_cancel_bt_clicked(GtkWidget *button _U_, gpointer data)
+             airpcap_if_selected->led = TRUE;
+             airpcap_if_close(ad);
+         }
+-    }
+ 
+-    /* reload the configuration!!! Configuration has not been saved but
+-        the corresponding structure has been modified probably...*/
+-    if (!airpcap_if_selected->saved)
+-    {
+-        airpcap_load_selected_if_configuration(airpcap_if_selected);
++        /* reload the configuration!!! Configuration has not been saved but
++           the corresponding structure has been modified probably...*/
++        if (!airpcap_if_selected->saved)
++        {
++            airpcap_load_selected_if_configuration(airpcap_if_selected);
++        }
+     }
+ 
+     gtk_widget_destroy(airpcap_advanced_w);

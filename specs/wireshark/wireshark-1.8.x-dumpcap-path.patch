@@ -1,0 +1,13 @@
+diff --git a/capture_sync.c b/capture_sync.c
+index 9694b58..ac4abfd 100644
+--- a/capture_sync.c
++++ b/capture_sync.c
+@@ -308,7 +308,7 @@ init_pipe_args(int *argc) {
+     *argv = NULL;
+ 
+     /* take Wireshark's absolute program path and replace "Wireshark" with "dumpcap" */
+-    exename = g_strdup_printf("%s" G_DIR_SEPARATOR_S "dumpcap", progfile_dir);
++    exename = g_strdup_printf("%s" G_DIR_SEPARATOR_S "dumpcap", "/usr/sbin");
+ 
+     /* Make that the first argument in the argument list (argv[0]). */
+     argv = sync_pipe_add_arg(argv, argc, exename);

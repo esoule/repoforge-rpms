@@ -1,0 +1,42 @@
+diff --git a/capture_opts.c b/capture_opts.c
+index ea1e7d2..42e2b1e 100644
+--- a/capture_opts.c
++++ b/capture_opts.c
+@@ -747,16 +747,16 @@ capture_opts_print_if_capabilities(if_capabilities_t *caps, char *name,
+         fprintf_stderr("Data link types of interface %s when %sin monitor mode (use option -y to set):\n",
+                        name, monitor_mode ? "" : "not ");
+     else
+-        fprintf_stderr("Data link types of interface %s (use option -y to set):\n", name);
++        fprintf_stderr("Data link types (use option -y to set):\n");
+     for (lt_entry = caps->data_link_types; lt_entry != NULL;
+          lt_entry = g_list_next(lt_entry)) {
+         data_link_info = (data_link_info_t *)lt_entry->data;
+-        fprintf_stderr("  %s", data_link_info->name);
++        fprintf_stderr("  %s\n", data_link_info->name);
+         if (data_link_info->description != NULL)
+-            fprintf_stderr(" (%s)", data_link_info->description);
++            fprintf_stderr(" (%s)\n", data_link_info->description);
+         else
+-            fprintf_stderr(" (not supported)");
+-        fprintf_stderr("\n");
++            fprintf_stderr(" (not supported)\n");
++        printf("\n");
+     }
+ }
+ 
+@@ -772,12 +772,12 @@ capture_opts_print_interfaces(GList *if_list)
+     for (if_entry = g_list_first(if_list); if_entry != NULL;
+          if_entry = g_list_next(if_entry)) {
+         if_info = (if_info_t *)if_entry->data;
+-        fprintf_stderr("%d. %s", i++, if_info->name);
++        printf("%d. %s", i++, if_info->name);
+ 
+         /* Print the description if it exists */
+         if (if_info->description != NULL)
+-            fprintf_stderr(" (%s)", if_info->description);
+-        fprintf_stderr("\n");
++            printf(" (%s)", if_info->description);
++        printf("\n");
+     }
+ }
+ 
