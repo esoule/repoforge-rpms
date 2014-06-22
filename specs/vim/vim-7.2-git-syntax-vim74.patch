@@ -1,7 +1,76 @@
-diff -urN vim72.orig/runtime/ftplugin/gitrebase.vim vim72/runtime/ftplugin/gitrebase.vim
---- vim72.orig/runtime/ftplugin/gitrebase.vim	2008-04-16 04:12:25.000000000 -0400
-+++ vim72/runtime/ftplugin/gitrebase.vim	2010-05-21 05:49:38.000000000 -0400
-@@ -1,11 +1,11 @@
+diff -urN b/runtime/ftplugin/gitcommit.vim c/runtime/ftplugin/gitcommit.vim
+--- b/runtime/ftplugin/gitcommit.vim	2014-06-22 15:47:19.000000000 -0400
++++ c/runtime/ftplugin/gitcommit.vim	2013-05-30 11:04:36.000000000 -0400
+@@ -1,7 +1,7 @@
+ " Vim filetype plugin
+-" Language:	git config file
+-" Maintainer:	Tim Pope <vimNOSPAM@tpope.info>
+-" Last Change:	2008 Jun 04
++" Language:	git commit file
++" Maintainer:	Tim Pope <vimNOSPAM@tpope.org>
++" Last Change:	2013 May 30
+ 
+ " Only do this when not done yet for this buffer
+ if (exists("b:did_ftplugin"))
+@@ -11,13 +11,14 @@
+ runtime! ftplugin/git.vim
+ let b:did_ftplugin = 1
+ 
++setlocal nomodeline tabstop=8 formatoptions-=croq formatoptions+=tl
++
++let b:undo_ftplugin = 'setl modeline< tabstop< formatoptions<'
++
+ if &textwidth == 0
+   " make sure that log messages play nice with git-log on standard terminals
+   setlocal textwidth=72
+-  if !exists("b:undo_ftplugin")
+-      let b:undo_ftplugin = ""
+-  endif
+-  let b:undo_ftplugin = b:undo_ftplugin . "|setl tw<"
++  let b:undo_ftplugin .= "|setl tw<"
+ endif
+ 
+ if exists("g:no_gitcommit_commands") || v:version < 700
+@@ -28,8 +29,6 @@
+   let b:git_dir = expand("%:p:h")
+ endif
+ 
+-" Automatically diffing can be done with:
+-"   autocmd FileType gitcommit DiffGitCached | wincmd p
+ command! -bang -bar -buffer -complete=custom,s:diffcomplete -nargs=* DiffGitCached :call s:gitdiffcached(<bang>0,b:git_dir,<f-args>)
+ 
+ function! s:diffcomplete(A,L,P)
+@@ -58,11 +57,11 @@
+   else
+     let extra = "-p --stat=".&columns
+   endif
+-  call system(git." diff --cached --no-color ".extra." > ".(exists("*shellescape") ? shellescape(name) : name))
++  call system(git." diff --cached --no-color --no-ext-diff ".extra." > ".(exists("*shellescape") ? shellescape(name) : name))
+   exe "pedit ".(exists("*fnameescape") ? fnameescape(name) : name)
+   wincmd P
+   let b:git_dir = a:gitdir
+   command! -bang -bar -buffer -complete=custom,s:diffcomplete -nargs=* DiffGitCached :call s:gitdiffcached(<bang>0,b:git_dir,<f-args>)
+-  nnoremap <silent> q :q<CR>
++  nnoremap <buffer> <silent> q :q<CR>
+   setlocal buftype=nowrite nobuflisted noswapfile nomodifiable filetype=git
+ endfunction
+diff -urN b/runtime/ftplugin/gitconfig.vim c/runtime/ftplugin/gitconfig.vim
+--- b/runtime/ftplugin/gitconfig.vim	2007-12-16 23:45:14.000000000 -0500
++++ c/runtime/ftplugin/gitconfig.vim	2010-05-15 07:04:03.000000000 -0400
+@@ -1,7 +1,7 @@
+ " Vim filetype plugin
+ " Language:	git config file
+-" Maintainer:	Tim Pope <vimNOSPAM@tpope.info>
+-" Last Change:	2007 Dec 16
++" Maintainer:	Tim Pope <vimNOSPAM@tpope.org>
++" Last Change:	2009 Dec 24
+ 
+ " Only do this when not done yet for this buffer
+ if (exists("b:did_ftplugin"))
+diff -urN b/runtime/ftplugin/gitrebase.vim c/runtime/ftplugin/gitrebase.vim
+--- b/runtime/ftplugin/gitrebase.vim	2014-06-22 15:48:15.000000000 -0400
++++ c/runtime/ftplugin/gitrebase.vim	2010-05-21 05:49:38.000000000 -0400
+@@ -1,7 +1,7 @@
  " Vim filetype plugin
  " Language:	git rebase --interactive
 -" Maintainer:	Tim Pope <vimNOSPAM@tpope.info>
@@ -11,27 +80,11 @@ diff -urN vim72.orig/runtime/ftplugin/gitrebase.vim vim72/runtime/ftplugin/gitre
  
  " Only do this when not done yet for this buffer
  if (exists("b:did_ftplugin"))
--    finish
-+  finish
- endif
- 
- runtime! ftplugin/git.vim
-@@ -13,27 +13,29 @@
- 
- setlocal comments=:# commentstring=#\ %s formatoptions-=t
- if !exists("b:undo_ftplugin")
--    let b:undo_ftplugin = ""
-+  let b:undo_ftplugin = ""
- endif
- let b:undo_ftplugin = b:undo_ftplugin."|setl com< cms< fo<"
- 
- function! s:choose(word)
--    s/^\(\w\+\>\)\=\(\s*\)\ze\x\{4,40\}\>/\=(strlen(submatch(1)) == 1 ? a:word[0] : a:word) . substitute(submatch(2),'^$',' ','')/e
-+  s/^\(\w\+\>\)\=\(\s*\)\ze\x\{4,40\}\>/\=(strlen(submatch(1)) == 1 ? a:word[0] : a:word) . substitute(submatch(2),'^$',' ','')/e
+@@ -22,12 +22,14 @@
  endfunction
  
  function! s:cycle()
--    call s:choose(get({'s':'edit','p':'squash'},getline('.')[0],'pick'))
+-  call s:choose(get({'s':'edit','p':'squash'},getline('.')[0],'pick'))
 +  call s:choose(get({'s':'edit','p':'squash','e':'reword','r':'fixup'},getline('.')[0],'pick'))
  endfunction
  
@@ -43,98 +96,94 @@ diff -urN vim72.orig/runtime/ftplugin/gitrebase.vim vim72/runtime/ftplugin/gitre
  command! -buffer -bar Cycle  :call s:cycle()
  " The above are more useful when they are mapped; for example:
  "nnoremap <buffer> <silent> S :Cycle<CR>
+diff -urN b/runtime/ftplugin/gitsendemail.vim c/runtime/ftplugin/gitsendemail.vim
+--- b/runtime/ftplugin/gitsendemail.vim	2007-12-16 23:45:20.000000000 -0500
++++ c/runtime/ftplugin/gitsendemail.vim	2010-05-15 07:04:03.000000000 -0400
+@@ -1,6 +1,6 @@
+ " Vim filetype plugin
+ " Language:	git send-email message
+-" Maintainer:	Tim Pope <vimNOSPAM@tpope.info>
+-" Last Change:	2007 Dec 16
++" Maintainer:	Tim Pope <vimNOSPAM@tpope.org>
++" Last Change:	2009 Dec 24
  
- if exists("g:no_plugin_maps") || exists("g:no_gitrebase_maps")
--    finish
-+  finish
- endif
- 
- nnoremap <buffer> <expr> K col('.') < 7 && expand('<Lt>cword>') =~ '\X' && getline('.') =~ '^\w\+\s\+\x\+\>' ? 'wK' : 'K'
-diff -urN vim72.orig/runtime/ftplugin/git.vim vim72/runtime/ftplugin/git.vim
---- vim72.orig/runtime/ftplugin/git.vim	2008-07-31 16:07:24.000000000 -0400
-+++ vim72/runtime/ftplugin/git.vim	2010-05-21 05:50:35.000000000 -0400
-@@ -1,33 +1,36 @@
+ runtime! ftplugin/mail.vim
+diff -urN b/runtime/ftplugin/git.vim c/runtime/ftplugin/git.vim
+--- b/runtime/ftplugin/git.vim	2014-06-22 15:49:39.000000000 -0400
++++ c/runtime/ftplugin/git.vim	2013-05-30 11:04:36.000000000 -0400
+@@ -1,7 +1,7 @@
  " Vim filetype plugin
  " Language:	generic git output
 -" Maintainer:	Tim Pope <vimNOSPAM@tpope.info>
 -" Last Change:	2008 Jul 30
 +" Maintainer:	Tim Pope <vimNOSPAM@tpope.org>
-+" Last Change:	2010 May 21
++" Last Change:	2013 May 30
  
  " Only do this when not done yet for this buffer
  if (exists("b:did_ftplugin"))
--    finish
-+  finish
- endif
+@@ -10,7 +10,9 @@
  let b:did_ftplugin = 1
  
  if !exists('b:git_dir')
--    if expand('%:p') =~# '\.git\>'
--        let b:git_dir = matchstr(expand('%:p'),'.*\.git\>')
--    elseif $GIT_DIR != ''
--        let b:git_dir = $GIT_DIR
--    endif
--    if (has('win32') || has('win64')) && exists('b:git_dir')
--        let b:git_dir = substitute(b:git_dir,'\\','/','g')
--    endif
-+  if expand('%:p') =~# '\.git\>'
-+    let b:git_dir = matchstr(expand('%:p'),'.*\.git\>')
-+  elseif $GIT_DIR != ''
-+    let b:git_dir = $GIT_DIR
-+  endif
-+  if (has('win32') || has('win64')) && exists('b:git_dir')
-+    let b:git_dir = substitute(b:git_dir,'\\','/','g')
-+  endif
- endif
- 
- if exists('*shellescape') && exists('b:git_dir') && b:git_dir != ''
--    if b:git_dir =~# '/\.git$' " Not a bare repository
--        let &l:path = escape(fnamemodify(b:git_dir,':h'),'\, ').','.&l:path
--    endif
--    let &l:path = escape(b:git_dir,'\, ').','.&l:path
--    let &l:keywordprg = 'git --git-dir='.shellescape(b:git_dir).' show'
-+  if b:git_dir =~# '/\.git$' " Not a bare repository
-+    let &l:path = escape(fnamemodify(b:git_dir,':h'),'\, ').','.&l:path
-+  endif
-+  let &l:path = escape(b:git_dir,'\, ').','.&l:path
-+  let &l:keywordprg = 'git --git-dir='.shellescape(b:git_dir).' show'
+-  if expand('%:p') =~# '\.git\>'
++  if expand('%:p') =~# '[\/]\.git[\/]modules[\/]'
++    " Stay out of the way
++  elseif expand('%:p') =~# '\.git\>'
+     let b:git_dir = matchstr(expand('%:p'),'.*\.git\>')
+   elseif $GIT_DIR != ''
+     let b:git_dir = $GIT_DIR
+@@ -29,6 +31,9 @@
  else
--    setlocal keywordprg=git\ show
-+  setlocal keywordprg=git\ show
-+endif
+   setlocal keywordprg=git\ show
+ endif
 +if has('gui_running')
 +  let &l:keywordprg = substitute(&l:keywordprg,'^git\>','git --no-pager','')
- endif
++endif
  
  setlocal includeexpr=substitute(v:fname,'^[^/]\\+/','','')
-diff -urN vim72.orig/runtime/syntax/gitcommit.vim vim72/runtime/syntax/gitcommit.vim
---- vim72.orig/runtime/syntax/gitcommit.vim	2008-04-15 18:46:45.000000000 -0400
-+++ vim72/runtime/syntax/gitcommit.vim	2010-05-21 05:39:11.000000000 -0400
-@@ -1,63 +1,81 @@
+ let b:undo_ftplugin = "setl keywordprg< path< includeexpr<"
+diff -urN b/runtime/indent/gitconfig.vim c/runtime/indent/gitconfig.vim
+--- b/runtime/indent/gitconfig.vim	2014-06-22 15:50:25.000000000 -0400
++++ c/runtime/indent/gitconfig.vim	2013-05-30 11:04:36.000000000 -0400
+@@ -1,7 +1,7 @@
+ " Vim indent file
+ " Language:	git config file
+-" Maintainer:	Tim Pope <vimNOSPAM@tpope.info>
+-" Last Change:	2008 Jun 04
++" Maintainer:	Tim Pope <vimNOSPAM@tpope.org>
++" Last Change:	2013 May 30
+ 
+ if exists("b:did_indent")
+   finish
+@@ -12,6 +12,8 @@
+ setlocal indentexpr=GetGitconfigIndent()
+ setlocal indentkeys=o,O,*<Return>,0[,],0;,0#,=,!^F
+ 
++let b:undo_indent = 'setl ai< inde< indk<'
++
+ " Only define the function once.
+ if exists("*GetGitconfigIndent")
+   finish
+diff -urN b/runtime/syntax/gitcommit.vim c/runtime/syntax/gitcommit.vim
+--- b/runtime/syntax/gitcommit.vim	2014-06-22 15:51:10.000000000 -0400
++++ c/runtime/syntax/gitcommit.vim	2013-05-30 11:04:36.000000000 -0400
+@@ -1,8 +1,8 @@
  " Vim syntax file
  " Language:	git commit file
 -" Maintainer:	Tim Pope <vimNOSPAM@tpope.info>
 +" Maintainer:	Tim Pope <vimNOSPAM@tpope.org>
  " Filenames:	*.git/COMMIT_EDITMSG
 -" Last Change:	2008 Apr 09
-+" Last Change:	2010 May 21
++" Last Change:	2013 May 30
  
  if exists("b:current_syntax")
--    finish
-+  finish
- endif
- 
- syn case match
- syn sync minlines=50
- 
- if has("spell")
--    syn spell toplevel
-+  syn spell toplevel
+   finish
+@@ -16,48 +16,66 @@
  endif
  
  syn include @gitcommitDiff syntax/diff.vim
 -syn region gitcommitDiff start=/\%(^diff --git \)\@=/ end=/^$\|^#\@=/ contains=@gitcommitDiff
-+syn region gitcommitDiff start=/\%(^diff --\%(git\|cc\|combined\) \)\@=/ end=/^$\|^#\@=/ contains=@gitcommitDiff
++syn region gitcommitDiff start=/\%(^diff --\%(git\|cc\|combined\) \)\@=/ end=/^\%(diff --\|$\|#\)\@=/ fold contains=@gitcommitDiff
  
  syn match   gitcommitFirstLine	"\%^[^#].*"  nextgroup=gitcommitBlank skipnl
 -syn match   gitcommitSummary  	"^.\{0,50\}" contained containedin=gitcommitFirstLine nextgroup=gitcommitOverflow contains=@Spell
@@ -147,7 +196,7 @@ diff -urN vim72.orig/runtime/syntax/gitcommit.vim vim72/runtime/syntax/gitcommit
  syn match   gitcommitOnBranch	"\%(^# \)\@<=On branch" contained containedin=gitcommitComment nextgroup=gitcommitBranch skipwhite
 -syn match   gitcommitBranch	"\S\+" contained
 +syn match   gitcommitOnBranch	"\%(^# \)\@<=Your branch .\{-\} '" contained containedin=gitcommitComment nextgroup=gitcommitBranch skipwhite
-+syn match   gitcommitBranch	"[^ \t']\+" contained
++syn match   gitcommitBranch	"[^ ']\+" contained
 +syn match   gitcommitNoBranch	"\%(^# \)\@<=Not currently on any branch." contained containedin=gitcommitComment
  syn match   gitcommitHeader	"\%(^# \)\@<=.*:$"	contained containedin=gitcommitComment
 +syn region  gitcommitAuthor	matchgroup=gitCommitHeader start=/\%(^# \)\@<=\%(Author\|Committer\):/ end=/$/ keepend oneline contained containedin=gitcommitComment transparent
@@ -156,7 +205,8 @@ diff -urN vim72.orig/runtime/syntax/gitcommit.vim vim72/runtime/syntax/gitcommit
  syn region  gitcommitUntracked	start=/^# Untracked files:/ end=/^#$\|^#\@!/ contains=gitcommitHeader,gitcommitHead,gitcommitUntrackedFile fold
  syn match   gitcommitUntrackedFile  "\t\@<=.*"	contained
  
- syn region  gitcommitDiscarded	start=/^# Changed but not updated:/ end=/^#$\|^#\@!/ contains=gitcommitHeader,gitcommitHead,gitcommitDiscardedType fold
+-syn region  gitcommitDiscarded	start=/^# Changed but not updated:/ end=/^#$\|^#\@!/ contains=gitcommitHeader,gitcommitHead,gitcommitDiscardedType fold
++syn region  gitcommitDiscarded	start=/^# Change\%(s not staged for commit\|d but not updated\):/ end=/^#$\|^#\@!/ contains=gitcommitHeader,gitcommitHead,gitcommitDiscardedType fold
  syn region  gitcommitSelected	start=/^# Changes to be committed:/ end=/^#$\|^#\@!/ contains=gitcommitHeader,gitcommitHead,gitcommitSelectedType fold
 +syn region  gitcommitUnmerged	start=/^# Unmerged paths:/ end=/^#$\|^#\@!/ contains=gitcommitHeader,gitcommitHead,gitcommitUnmergedType fold
  
@@ -200,25 +250,35 @@ diff -urN vim72.orig/runtime/syntax/gitcommit.vim vim72/runtime/syntax/gitcommit
  hi def link gitcommitArrow		gitcommitComment
  "hi def link gitcommitOverflow		Error
  hi def link gitcommitBlank		Error
-diff -urN vim72.orig/runtime/syntax/gitrebase.vim vim72/runtime/syntax/gitrebase.vim
---- vim72.orig/runtime/syntax/gitrebase.vim	2008-04-16 04:12:25.000000000 -0400
-+++ vim72/runtime/syntax/gitrebase.vim	2010-05-21 05:41:12.000000000 -0400
-@@ -1,11 +1,11 @@
+diff -urN b/runtime/syntax/gitconfig.vim c/runtime/syntax/gitconfig.vim
+--- b/runtime/syntax/gitconfig.vim	2014-06-22 15:51:20.000000000 -0400
++++ c/runtime/syntax/gitconfig.vim	2010-05-21 05:40:11.000000000 -0400
+@@ -1,8 +1,8 @@
+ " Vim syntax file
+ " Language:	git config file
+-" Maintainer:	Tim Pope <vimNOSPAM@tpope.info>
++" Maintainer:	Tim Pope <vimNOSPAM@tpope.org>
+ " Filenames:	gitconfig, .gitconfig, *.git/config
+-" Last Change:	2008 Jun 04
++" Last Change:	2010 May 21
+ 
+ if exists("b:current_syntax")
+   finish
+diff -urN b/runtime/syntax/gitrebase.vim c/runtime/syntax/gitrebase.vim
+--- b/runtime/syntax/gitrebase.vim	2014-06-22 15:57:17.000000000 -0400
++++ c/runtime/syntax/gitrebase.vim	2013-05-30 11:04:36.000000000 -0400
+@@ -1,8 +1,8 @@
  " Vim syntax file
  " Language:	git rebase --interactive
 -" Maintainer:	Tim Pope <vimNOSPAM@tpope.info>
 +" Maintainer:	Tim Pope <vimNOSPAM@tpope.org>
  " Filenames:	git-rebase-todo
 -" Last Change:	2008 Apr 16
-+" Last Change:	2010 May 21
++" Last Change:	2013 May 30
  
  if exists("b:current_syntax")
--    finish
-+  finish
- endif
- 
- syn case match
-@@ -13,19 +13,23 @@
+   finish
+@@ -13,17 +13,24 @@
  syn match   gitrebaseHash   "\v<\x{7,40}>"                             contained
  syn match   gitrebaseCommit "\v<\x{7,40}>"  nextgroup=gitrebaseSummary skipwhite
  syn match   gitrebasePick   "\v^p%(ick)=>"   nextgroup=gitrebaseCommit skipwhite
@@ -226,7 +286,9 @@ diff -urN vim72.orig/runtime/syntax/gitrebase.vim vim72/runtime/syntax/gitrebase
  syn match   gitrebaseEdit   "\v^e%(dit)=>"   nextgroup=gitrebaseCommit skipwhite
  syn match   gitrebaseSquash "\v^s%(quash)=>" nextgroup=gitrebaseCommit skipwhite
 +syn match   gitrebaseFixup  "\v^f%(ixup)=>"  nextgroup=gitrebaseCommit skipwhite
++syn match   gitrebaseExec   "\v^%(x|exec)>" nextgroup=gitrebaseCommand skipwhite
  syn match   gitrebaseSummary ".*"               contains=gitrebaseHash contained
++syn match   gitrebaseCommand ".*"                                      contained
  syn match   gitrebaseComment "^#.*"             contains=gitrebaseHash
 -syn match   gitrebaseSquashError "\v%^s%(quash)=>" nextgroup=gitrebaseCommit skipwhite
 +syn match   gitrebaseSquashError "\v%^%(s%(quash)=>|f%(ixup)=>)" nextgroup=gitrebaseCommit skipwhite
@@ -238,16 +300,26 @@ diff -urN vim72.orig/runtime/syntax/gitrebase.vim vim72/runtime/syntax/gitrebase
  hi def link gitrebaseEdit           PreProc
  hi def link gitrebaseSquash         Type
 +hi def link gitrebaseFixup          Special
++hi def link gitrebaseExec           Function
  hi def link gitrebaseSummary        String
  hi def link gitrebaseComment        Comment
--hi def link gitrebaseSquashError     Error
-+hi def link gitrebaseSquashError    Error
+ hi def link gitrebaseSquashError    Error
+diff -urN b/runtime/syntax/gitsendemail.vim c/runtime/syntax/gitsendemail.vim
+--- b/runtime/syntax/gitsendemail.vim	2014-06-22 15:51:48.000000000 -0400
++++ c/runtime/syntax/gitsendemail.vim	2010-05-21 05:41:44.000000000 -0400
+@@ -2,7 +2,7 @@
+ " Language:	git send-email message
+ " Maintainer:	Tim Pope
+ " Filenames:	*.msg.[0-9]* (first line is "From ... # This line is ignored.")
+-" Last Change:	2007 Dec 16
++" Last Change:	2010 May 21
  
- let b:current_syntax = "gitrebase"
-diff -urN vim72.orig/runtime/syntax/git.vim vim72/runtime/syntax/git.vim
---- vim72.orig/runtime/syntax/git.vim	2008-04-15 23:15:49.000000000 -0400
-+++ vim72/runtime/syntax/git.vim	2010-05-21 05:43:24.000000000 -0400
-@@ -1,10 +1,10 @@
+ if exists("b:current_syntax")
+   finish
+diff -urN b/runtime/syntax/git.vim c/runtime/syntax/git.vim
+--- b/runtime/syntax/git.vim	2014-06-22 15:55:15.000000000 -0400
++++ c/runtime/syntax/git.vim	2010-05-21 05:43:24.000000000 -0400
+@@ -1,7 +1,7 @@
  " Vim syntax file
  " Language:	generic git output
 -" Maintainer:	Tim Pope <vimNOSPAM@tpope.info>
@@ -256,11 +328,7 @@ diff -urN vim72.orig/runtime/syntax/git.vim vim72/runtime/syntax/git.vim
 +" Last Change:	2010 May 21
  
  if exists("b:current_syntax")
--    finish
-+  finish
- endif
- 
- syn case match
+   finish
 @@ -13,14 +13,19 @@
  syn include @gitDiff syntax/diff.vim
  

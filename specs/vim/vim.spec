@@ -24,7 +24,7 @@ Summary: The VIM editor
 URL:     http://www.vim.org/
 Name: vim
 Version: %{baseversion}.%{beta}%{patchlevel}
-Release: 1.8.1%{?dist}
+Release: 1.8.2%{?dist}
 License: Vim and GPLv2+ and BSD and LGPLv2+ and Open Publication
 Group: Applications/Editors
 Source0: ftp://ftp.vim.org/pub/vim/unix/vim-%{baseversion}%{?beta}%{?CVSDATE}.tar.bz2
@@ -494,8 +494,10 @@ Patch3013: vim-7.2-629568.patch
 # bugzila 663753:
 Patch3014: vim-7.2-httpd.patch
 
-# Update git syntax from vim-7.3
-Patch5000: vim-7.2-git-syntax.patch
+# Update git syntax from vim-7.4
+Patch5000: vim-7.2-git-syntax-whitespace.patch
+Patch5001: vim-7.2-git-syntax-vim74.patch
+
 
 Buildroot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 BuildRequires: python-devel ncurses-devel gettext perl-devel
@@ -1051,6 +1053,7 @@ perl -pi -e "s,bin/nawk,bin/awk,g" runtime/tools/mve.awk
 %patch3014 -p1
 
 %patch5000 -p1
+%patch5001 -p1
 
 cp -f %{SOURCE15} runtime/syntax/forth.vim
 cp -f %{SOURCE16} runtime/plugin/netrwPlugin.vim
@@ -1496,6 +1499,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_datadir}/icons/hicolor/*/apps/*
 
 %changelog
+* Sun Jun 22 2014 Evgueni Souleimanov <esoule@100500.ca> 7.2.411-1.8.2
+- update git syntax highlighting from vim-7.4
+
 * Tue May 14 2013 Evgueni Souleimanov <esoule@100500.ca> 7.2.411-1.8.1
 - update git syntax highlighting from vim-7.3
 
