@@ -1,16 +1,23 @@
 Name:		coan
 Version:	5.2
-Release:	1%{?dist}
+Release:	2.1%{?dist}
 Summary:	A command line tool for simplifying the pre-processor conditionals in source code
 Group:		Development/Languages
 License:	BSD
 URL:		http://coan2.sourceforge.net/
 Source0:	http://downloads.sourceforge.net/coan2/%{name}-%{version}.tar.gz
 
+# Avoid install of coan.1.gz as coan.1.1 - bug in Makefile
+Patch1:         coan-man-double-gzip.patch
+
 # Note: coan was formerly called sunifdef i.e sunifdef was renamed to coan
 # with the 4.0 release. This Provides can be removed in F-16.
 Provides:	sunifdef = %{version}-%{release}
 Obsoletes:	sunifdef < 4.0
+
+BuildRequires:  autoconf
+BuildRequires:  automake
+BuildRequires:  findutils
 
 %description
 %{name} (formerly sunifdef) is a software engineering tool for analyzing
@@ -33,7 +40,16 @@ for i in AUTHORS LICENSE.BSD README ChangeLog ; do
     sed -i -e 's/\r$//' $i
 done
 
+for i in ./Makefile.am ./man/Makefile.am ./test_coan/README ; do
+    sed -i -e 's/\r$//' $i
+done
+
+find ./test_coan/test_cases \( -name '*.c' -o -name '*.c.expect' \) | xargs -n 1 sed -i -e 's/\r$//'
+
+%patch1 -p1
+
 %build
+autoreconf -f
 %configure
 make %{?_smp_mflags}
 
@@ -49,6 +65,12 @@ make install DESTDIR=$RPM_BUILD_ROOT INSTALL="install -p"
 %{_mandir}/man1/%{name}.1.*
 
 %changelog
+* Mon Jun 23 2014 Evgueni Souleimanov <esoule@100500.ca> - 5.2-2.1
+- fix double gzip of manpage coan.1.1
+
+* Sat Jun 07 2014 Fedora Release Engineering <rel-eng@lists.fedoraproject.org> - 5.2-2
+- Rebuilt for https://fedoraproject.org/wiki/Fedora_21_Mass_Rebuild
+
 * Sat May 24 2014 Filipe Rosset <rosset.filipe@gmail.com> - 5.2-1
 - Rebuilt for new upstream version, fixes rhbz #925162, #992071 and #902927
 

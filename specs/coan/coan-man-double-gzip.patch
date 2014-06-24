@@ -1,0 +1,18 @@
+diff -urN a/man/Makefile.am b/man/Makefile.am
+--- a/man/Makefile.am	2013-09-01 05:15:14.000000000 -0400
++++ b/man/Makefile.am	2014-06-23 19:40:24.000000000 -0400
+@@ -1,4 +1,4 @@
+-man1_MANS = coan.1.gz
++man1_MANS = coan.1
+ 
+ .phony: all man clean distlean
+ 
+@@ -10,7 +10,7 @@
+ distclean: clean
+ 	rm -f Makefile
+ 
+-man:	coan.1.gz
++man:	coan.1
+  
+ coan.1: man_pod.pl
+ 	rel_month='SEPTEMBER 2013' && \
