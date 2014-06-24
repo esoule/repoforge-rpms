@@ -67,6 +67,7 @@ make install DESTDIR=$RPM_BUILD_ROOT INSTALL="install -p"
 %changelog
 * Mon Jun 23 2014 Evgueni Souleimanov <esoule@100500.ca> - 5.2-2.1
 - fix double gzip of manpage coan.1.1
+- convert CRLF line terminators to LF in tests, makefiles
 
 * Sat Jun 07 2014 Fedora Release Engineering <rel-eng@lists.fedoraproject.org> - 5.2-2
 - Rebuilt for https://fedoraproject.org/wiki/Fedora_21_Mass_Rebuild
