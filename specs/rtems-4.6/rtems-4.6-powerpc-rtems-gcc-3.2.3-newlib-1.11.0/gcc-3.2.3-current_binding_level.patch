@@ -1,0 +1,28 @@
+* decl.c (set_current_binding_level): Delete, revert last change.
+(current_binding_level): Modify to allow it as as lvalue.
+
+   NOTE: this is a sum of two git commits
+   4fa0b096fecff8fd63e8cab50890ce1de2995a93
+   git-svn-id: svn+ssh://gcc.gnu.org/svn/gcc/trunk@65201 138bc75d-0d04-0410-961f-82ee72b054a4
+   fa3834f1ad9bf732dfcf4fc0785fa240e3094df9
+   git-svn-id: svn+ssh://gcc.gnu.org/svn/gcc/trunk@65273 138bc75d-0d04-0410-961f-82ee72b054a4
+
+diff --git a/gcc-3.2.3/gcc/cp/decl.c b/gcc-3.2.3/gcc/cp/decl.c
+--- a/gcc-3.2.3/gcc/cp/decl.c
++++ b/gcc-3.2.3/gcc/cp/decl.c
+@@ -454,9 +454,9 @@ struct cp_binding_level GTY(())
+ /* The binding level currently in effect.  */
+ 
+ #define current_binding_level			\
+-  (cfun && cp_function_chain->bindings		\
+-   ? cp_function_chain->bindings		\
+-   : scope_chain->bindings)
++  (*(cfun && cp_function_chain->bindings	\
++   ? &cp_function_chain->bindings		\
++   : &scope_chain->bindings))
+ 
+ /* The binding level of the current class, if any.  */
+ 
+-- 
+1.7.1
+

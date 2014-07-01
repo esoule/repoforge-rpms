@@ -1,0 +1,27 @@
+From: zack <zack@138bc75d-0d04-0410-961f-82ee72b054a4>
+Date: Sat, 28 Jun 2003 00:42:31 +0000
+Subject: [PATCH] 	* dbxout.c (flag_debug_only_used_symbols): Delete redundant
+ 	declaration.
+ f:
+ 	* com.c (input_file_stack_tick): Delete redundant declaration.
+ java:
+ 	* gjavah.c (flag_jni): Make non-static.
+ 	* parse-scan.y (ctxp): Make non-static.
+
+git-svn-id: svn+ssh://gcc.gnu.org/svn/gcc/trunk@68624 138bc75d-0d04-0410-961f-82ee72b054a4
+git-commit-id: 49d8175ba52ce26b83db2788ae0e86cb8f515c5f
+
+diff --git a/gcc-3.2.3/gcc/java/gjavah.c b/gcc-3.2.3/gcc/java/gjavah.c
+--- a/gcc-3.2.3/gcc/java/gjavah.c
++++ b/gcc-3.2.3/gcc/java/gjavah.c
+@@ -45,7 +45,7 @@ FILE *out = NULL;
+ static int found_error = 0;
+ 
+ /* Nonzero if we're generating JNI output.  */
+-static int flag_jni = 0;
++int flag_jni = 0;
+ 
+ /* When non zero, warn when source file is newer than matching class
+    file.  */
+-- 
+1.7.1

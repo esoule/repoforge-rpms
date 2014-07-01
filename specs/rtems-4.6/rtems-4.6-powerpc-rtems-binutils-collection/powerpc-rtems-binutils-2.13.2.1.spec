@@ -24,9 +24,6 @@
 %define _exeext %{nil}
 %endif
 
-# Work around to a bug in rpm-4.2
-%define __os_install_post	%{nil}
-
 Vendor: 	OARCorp
 Distribution: 	Linux
 
@@ -38,14 +35,14 @@ BuildRoot:	%{_defaultbuildroot}
 Name:         %{rpmprefix}%{binutils_target}-binutils-collection
 Summary:      binutils for target %{binutils_target}
 Group:        %{rpmgroup}
-Release:      2
+Release:      2.0.4%{?dist}
 License:      GPL/LGPL
 
 Autoreqprov:  	on
 Packager:     	corsepiu@faw.uni-ulm.de and joel@OARcorp.com
 Prefix:		%{_prefix}
-BuildPreReq:	/sbin/install-info
-BuildPreReq:	texinfo >= 4.2
+BuildRequires:	/sbin/install-info
+BuildRequires:	texinfo >= 4.2
 
 Version:      	%{binutils_version}
 Source0:	ftp://ftp.gnu.org/pub/gnu/binutils/binutils-%{binutils_version}.tar.bz2
@@ -62,7 +59,21 @@ Source0:	ftp://ftp.gnu.org/pub/gnu/binutils/binutils-%{binutils_version}.tar.bz2
 # your /usr/src/redhat/SOURCES directory ($RPM_SOURCE_DIR).
 # Or you can try the ftp options of rpm :-)
 #
+%if 0%{?nosrcrpm} != 0
 NoSource:      0
+%endif
+
+#
+# binutils builds on x86_64, but powerpc-rtems-ld fails to
+# link some of the RTEMS tests, and also prints 64-bit pointer
+# addresses in disassembly. Use i686 packages on x86_64 architecture
+#
+ExcludeArch: x86_64
+
+## Do not generate debuginfo packages
+%define debug_package %{nil}
+## Do not strip any binaries
+%define __strip /bin/true
 
 %description
 
@@ -100,6 +111,9 @@ This is binutils sources with patches for RTEMS.
   gzip -9qf $RPM_BUILD_ROOT%{_prefix}/info/*.info 2>/dev/null
   gzip -9qf $RPM_BUILD_ROOT%{_prefix}/info/*.info-* 2>/dev/null
 
+# gzip man files
+  gzip -9qf $RPM_BUILD_ROOT%{_mandir}/man?/* 2>/dev/null
+
   if test -f $RPM_BUILD_ROOT%{_prefix}/info/configure.info.gz;
   then
 # These are only present in binutils >= 2.9.5
@@ -116,18 +130,13 @@ This is binutils sources with patches for RTEMS.
     /sbin/install-info $i $RPM_BUILD_ROOT%{_prefix}/info/dir
   done
 
-%clean
-# let rpm --clean remove BuildRoot iif using the default BuildRoot
-  test $RPM_BUILD_ROOT = "%{_defaultbuildroot}" && \
-    rm -rf $RPM_BUILD_ROOT
-
 # ==============================================================
 # rtems-base-binutils
 # ==============================================================
 %package -n %{rpmprefix}rtems-base-binutils
 Summary:      base package for rtems binutils
 Group: %{rpmgroup}
-PreReq:		/sbin/install-info
+Requires(post,postun): /sbin/install-info
 
 %description -n %{rpmprefix}rtems-base-binutils
 
@@ -163,12 +172,10 @@ This is the base for binutils regardless of target CPU.
 %doc %{_prefix}/info/bfd.info.gz
 %doc %{_prefix}/info/binutils.info.gz
 %doc %{_prefix}/info/ld.info.gz
-%if "%{binutils_version}" < "2.14"
+#### %if "%{binutils_version}" < "2.14"
 %doc %{_prefix}/info/as.info-*.gz
-%doc %{_prefix}/info/bfd.info-?.gz
-%doc %{_prefix}/info/binutils.info-?.gz
-%doc %{_prefix}/info/ld.info-?.gz
-%endif
+%doc %{_prefix}/info/bfd.info-*.gz
+#### %endif
 # deleted as of 2.13
 # %doc %{_prefix}/info/gasp.info.gz
 %doc %{_prefix}/info/standards.info.gz
@@ -243,5 +250,11 @@ This is the GNU binutils for RTEMS targetting %{binutils_target}.
 %{_prefix}/%{binutils_target}/lib/ldscripts
 
 %changelog
+* Tue Jul 1 2014 Evgueni Souleimanov <esoule@100500.ca> - 2.13.2.1-2.0.4
+- Update rpm tags to match rpm 4.8.0
+- gzip all man pages and info pages
+- fix packaging of info files
+- disallow build on x86_64, powerpc-rtems-ld fails to link some RTEMS tests
+
 * Wed Jan 21 2004 RTEMS Project - 2.13.2.1-2
 - Original Package, as provided by RTEMS

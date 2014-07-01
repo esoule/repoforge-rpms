@@ -1,0 +1,24 @@
+From bdf64bacd5b198ebda7fd581a5b26547ec6a925b Mon Sep 17 00:00:00 2001
+From: David Carlton <carlton@bactrian.org>
+Date: Tue, 1 Oct 2002 19:26:05 +0000
+Subject: [PATCH] 2002-09-30  David Carlton  <carlton@math.stanford.edu>
+
+	* Makefile.in (ppc-sysv-tdep.o): Depend on gdb_string_h.
+	* ppc-sysv-tdep.c: #include "gdb_string.h".
+	* remote-sds.c (getmessage): Add semicolon after 'retry' label to
+	pacify GCC.
+
+diff --git a/gdb/remote-sds.c b/gdb/remote-sds.c
+--- a/gdb/remote-sds.c
++++ b/gdb/remote-sds.c
+@@ -978,6 +978,7 @@ getmessage (unsigned char *buf, int forever)
+       /* Try the whole thing again.  */
+     retry:
+       /* need to do something here */
++      ;
+     }
+ 
+   /* We have tried hard enough, and just can't receive the packet.  Give up. */
+-- 
+1.7.1
+

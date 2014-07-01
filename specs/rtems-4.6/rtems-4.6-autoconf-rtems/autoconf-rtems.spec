@@ -22,17 +22,17 @@ Vendor:       http://www.rtems.com
 Name:         %{name}
 Packager:     Ralf Corsepius <ralf_corsepius@rtems.org>
 
-Copyright:    GPL
+License:      GPL
 URL:          http://www.gnu.org/software/autoconf
 Group:        RTEMS/4.6
 Version:      %{rpmvers}
-Release:      0
+Release:      1.0.4%{?dist}
 Summary:      Tool for automatically generating GNU style Makefile.in's
 BuildArch:    noarch
 BuildRoot:    %{_defaultbuildroot}
 BuildRequires: perl m4 gawk emacs
 Requires:     m4 gawk
-PreReq:       /sbin/install-info
+Requires(post,preun):  /sbin/install-info
 
 Source: autoconf-%{srcvers}.tar.bz2
 # Patch0: autoconf-2.59-quoting-20040817-1.diff
@@ -67,14 +67,13 @@ make DESTDIR=${RPM_BUILD_ROOT} install
 # in %%files below to fail
 mkdir -p ${RPM_BUILD_ROOT}%{_datadir}/emacs/site-lisp
 
-gzip -9qf $RPM_BUILD_ROOT%{_infodir}/autoconf.info* 2>/dev/null
 # RTEMS's standards.info comes from binutils
 rm -f $RPM_BUILD_ROOT%{_infodir}/standards.info*
-# gzip -9qf $RPM_BUILD_ROOT%{_infodir}/standards.info* 2>/dev/null
-gzip -9qf $RPM_BUILD_ROOT%{_mandir}/man?/* 2>/dev/null
+# info/dir file is not packaged
+rm -f $RPM_BUILD_ROOT%{_infodir}/dir
 
-%clean
-rm -rf "$RPM_BUILD_ROOT"
+gzip -9qf $RPM_BUILD_ROOT%{_infodir}/*.info* 2>/dev/null
+gzip -9qf $RPM_BUILD_ROOT%{_mandir}/man?/* 2>/dev/null
 
 %post
 install-info  --info-dir=%{_infodir} %{_infodir}/autoconf.info.gz
@@ -90,12 +89,16 @@ fi
 %defattr(-,root,root)
 # %doc AUTHORS COPYING ChangeLog NEWS README THANKS
 %{_bindir}/*
-%{_infodir}/autoconf.info*
-#%{_infodir}/standards.info*
-%{_mandir}/man?/*
+%doc %{_infodir}/autoconf.info*
+#%doc %{_infodir}/standards.info*
+%doc %{_mandir}/man?/*
 %{_datadir}/autoconf
 %exclude %{_datadir}/emacs/site-lisp
 
 %changelog
+* Tue Jul 1 2014 Evgueni Souleimanov <esoule@100500.ca> - 2.59-1.0.4
+- Update rpm tags to match rpm 4.8.0
+- gzip all man pages and info pages
+
 * Wed Oct 13 2004 RTEMS Project - 2.59-0
 - Original Package, as provided by RTEMS

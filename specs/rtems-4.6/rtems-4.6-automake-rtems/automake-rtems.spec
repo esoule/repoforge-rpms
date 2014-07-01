@@ -25,17 +25,17 @@ Name:         %{name}
 Packager:     Ralf Corsepius <corsepiu@faw.uni-ulm.de>
 URL:          http://sources.redhat.com/automake
 
-Copyright:    GPL
+License:      GPL
 Group:        RTEMS/4.6
 Autoreqprov:  on
 Version:      %{rpmvers}
-Release:      2
+Release:      2.0.3%{?dist}
 Summary:      Tool for automatically generating GNU style Makefile.in's
 BuildArch:    noarch
 BuildRoot:    %{_defaultbuildroot}
-BuildPreReq:  %{requirements} perl help2man
+BuildRequires: %{requirements} perl help2man
 Requires:     %{requirements}
-PreReq:	      /sbin/install-info
+Requires(post,preun): /sbin/install-info
 
 Source: ftp://ftp.gnu.org/gnu/automake/automake-%{srcvers}.tar.bz2
 
@@ -66,12 +66,11 @@ do
   install -m 644 `basename $i`.1 $RPM_BUILD_ROOT/%{_mandir}/man1
 done
 
+# info/dir file is not packaged
+rm -f $RPM_BUILD_ROOT%{_infodir}/dir
+
 gzip -9qf $RPM_BUILD_ROOT%{_infodir}/*.info* 2>/dev/null
 gzip -9qf $RPM_BUILD_ROOT%{_mandir}/man?/* 2>/dev/null
-
-%clean
-[ x"$RPM_BUILD_ROOT" = x"%{_defaultbuildroot}" ] ; \
-   rm -rf "$RPM_BUILD_ROOT"
 
 %post 
 install-info  --info-dir=%{_infodir} %{_infodir}/automake.info.gz
@@ -92,5 +91,9 @@ fi
 %{_datadir}/automake-%{amvers}
 
 %changelog
+* Tue Jul 1 2014 Evgueni Souleimanov <esoule@100500.ca> - 1.7.2-2.0.3
+- Update rpm tags to match rpm 4.8.0
+- gzip all man pages and info pages
+
 * Wed Jan 21 2004 RTEMS Project - 1.7.2-2
 - Original Package, as provided by RTEMS

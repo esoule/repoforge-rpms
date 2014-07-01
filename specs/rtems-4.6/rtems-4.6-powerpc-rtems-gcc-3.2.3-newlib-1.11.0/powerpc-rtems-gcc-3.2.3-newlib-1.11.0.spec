@@ -24,9 +24,6 @@
 %define _exeext %{nil}
 %endif
 
-# Work around to a bug in rpm-4.2
-%define __os_install_post	%{nil}
-
 Vendor: 	www.rtems.com
 Distribution: 	Linux
 
@@ -40,10 +37,10 @@ BuildRoot:	%{_defaultbuildroot}
 Name:         %{rpmprefix}%{gcc_target}-gcc-newlib
 Summary:      gcc and newlib C Library for %{gcc_target}.
 Group: %{rpmgroup}
-Release:      4
+Release:      4.0.6%{?dist}
 License:      gcc is GPL/LGPL ; newlib no has restrictions on run-time usage
 
-Autoreqprov:  	on
+AutoReqProv:  	on
 Packager:     	corsepiu@faw.uni-ulm.de and joel@OARcorp.com
 
 Version:      	gcc%{gcc_version}newlib%{newlib_version}
@@ -59,8 +56,12 @@ Source0: ftp://ftp.gnu.org/pub/gnu/gcc/gcc-%{gcc_version}/gcc-%{gcc_version}-eve
 Source1:	ftp://sources.redhat.com/pub/newlib/newlib-%{newlib_version}.tar.gz
 Patch0: gcc-3.2.3-rtems-20040420.diff
 Patch1: newlib-1.11.0-rtems-20030605.diff
-BuildPreReq:	texinfo >= 4.2
-BuildPreReq:	%{rpmprefix}%{gcc_target}-binutils
+Patch2: gcc-3.2.3-obstack-1grow-fast-lvalue.patch
+Patch3: gcc-3.2.3-current_binding_level.patch
+Patch4: gcc-3.2.3-flag_jni-non-static.patch
+
+BuildRequires:	texinfo >= 4.2
+BuildRequires:	%{rpmprefix}%{gcc_target}-binutils
 #
 # The original sources are not included in the source RPM.
 # If we included them, then the source RPMs for each target
@@ -72,8 +73,22 @@ BuildPreReq:	%{rpmprefix}%{gcc_target}-binutils
 # your /usr/src/redhat/SOURCES directory ($RPM_SOURCE_DIR).
 # Or you can try the ftp options of rpm :-)
 #
+%if 0%{?nosrcrpm} != 0
 NoSource:	0
 NoSource:	1
+%endif
+
+#
+# binutils builds on x86_64, but powerpc-rtems-ld fails to
+# link some of the RTEMS tests, and also prints 64-bit pointer
+# addresses in disassembly. Use i686 packages on x86_64 architecture
+#
+ExcludeArch: x86_64
+
+## Do not generate debuginfo packages
+%define debug_package %{nil}
+## Do not strip any binaries
+%define __strip /bin/true
 
 # Use rpm -ba --define 'gnat [0|1]' xxx.spec to override building gnat for 
 # those targets wanting to support ada.
@@ -131,7 +146,8 @@ NoSource:	1
 %endif
 
 %if "%{gcc_target}" == "powerpc-rtems"
-%define build_gnat      %_gnat
+# disable Ada support on powerpc-rtems, it does not build with gcc 4.4.7 on EL6
+%define build_gnat      0
 %define build_gcj	%_gcj
 %endif
 
@@ -142,18 +158,13 @@ NoSource:	1
 
 %if %build_gcj
 # Building gcj requires bison and zlib
-BuildPreReq:	bison
-%if "%_vendor" == "redhat"
-BuildPreReq:	zlib-devel
-%endif
+BuildRequires:	bison
+BuildRequires:	zlib-devel
 %endif
 
 %if %build_gnat
 # Building gnat requires gnat
-%if "%_vendor" == "redhat"
-# This really isn't available until RedHat 8.0.  How to conditionalize this?
-# BuildPreReq:	gcc-gnat
-%endif
+BuildRequires:	gcc-gnat
 %endif
 
 %description
@@ -177,6 +188,9 @@ This is gcc's and newlib C Library's sources with patches for RTEMS.
 
 %patch0 -p0
 %patch1 -p0
+%patch2 -p1
+%patch3 -p1
+%patch4 -p1
 
   cd gcc-%{gcc_version}
     sed -e 's/\(version_string = \"[^\"]*\)/\1 (OAR Corporation gcc-%{gcc_version}-20040420\/newlib-%{newlib_version}-20030605-4)/' \
@@ -314,12 +328,15 @@ This is gcc's and newlib C Library's sources with patches for RTEMS.
 %endif
 
   # gzip info files
-  gzip -f $RPM_BUILD_ROOT%{_prefix}/info/*.info 2>/dev/null
+  gzip -9qf $RPM_BUILD_ROOT%{_prefix}/info/*.info 2>/dev/null
 %if "%{gcc_version}" < "3.3"
   # gcc-3.3 ships monolytic *.infos
-  gzip -f $RPM_BUILD_ROOT%{_prefix}/info/*.info-? 2>/dev/null
-  gzip -f $RPM_BUILD_ROOT%{_prefix}/info/*.info-?? 2>/dev/null
+  gzip -9qf $RPM_BUILD_ROOT%{_prefix}/info/*.info-? 2>/dev/null
+  gzip -9qf $RPM_BUILD_ROOT%{_prefix}/info/*.info-?? 2>/dev/null
 %endif
+
+  # gzip man files
+  gzip -9qf $RPM_BUILD_ROOT%{_mandir}/man?/* 2>/dev/null
 
   rm -f dirs ;
   echo "%defattr(-,root,root)" >> dirs
@@ -391,6 +408,9 @@ This is gcc's and newlib C Library's sources with patches for RTEMS.
     esac
   done
 
+# info/dir file is not packaged
+  rm -f $RPM_BUILD_ROOT%{_infodir}/dir
+
 %clean
 # let rpm --clean remove BuildRoot iif using the default BuildRoot
   test $RPM_BUILD_ROOT = "%{_defaultbuildroot}" && \
@@ -402,6 +422,7 @@ This is gcc's and newlib C Library's sources with patches for RTEMS.
 %package -n %{rpmprefix}rtems-base-gcc
 Summary:      	base package for rtems gcc and newlib C Library 
 Group: %{rpmgroup}
+Requires(pre,postun): /sbin/install-info
 
 %description -n %{rpmprefix}rtems-base-gcc
 
@@ -485,6 +506,7 @@ This is gcc and newlib C Library for %{gcc_target}.
 Summary:      rtems base package for gcc/g77 compiler
 Group: %{rpmgroup}
 Requires: rtems-base-gcc
+Requires(pre,postun): /sbin/install-info
 
 %description -n %{rpmprefix}rtems-base-g77
 RTEMS is an open source operating system for embedded systems.
@@ -596,7 +618,7 @@ This is the gcc/java compiler for %{gcc_target}
 %{_prefix}/bin/%{gcc_target}-jcf-dump%{_exeext}
 %{_prefix}/bin/%{gcc_target}-jv-scan%{_exeext}
 %{_prefix}/bin/%{gcc_target}-gcjh%{_exeext}
-%{_prefix}/man/man1/%{gcc_target}-gcj.1
+%{_prefix}/man/man1/%{gcc_target}-gcj.1*
 
 %{_prefix}/lib/gcc-lib/%{gcc_target}/%{gcc_version}/jc1%{_exeext}
 %{_prefix}/lib/gcc-lib/%{gcc_target}/%{gcc_version}/jvgenmain%{_exeext}
@@ -694,5 +716,13 @@ This is the gcc/gnat compiler for %{gcc_target}
 %endif
 
 %changelog
+* Tue Jul 1 2014 Evgueni Souleimanov <esoule@100500.ca> - gcc3.2.3newlib1.11.0-4.0.6
+- Update rpm tags to match rpm 4.8.0
+- gzip all man pages and info pages
+- fix packaging of info files
+- add patches for building with gcc 4.4.7 on EL6
+- disable Ada support, it does not build with gcc 4.4.7 on EL6
+- disallow build on x86_64, powerpc-rtems-ld fails to link some RTEMS tests
+
 * Tue Apr 20 2004 RTEMS Project - gcc3.2.3newlib1.11.0-4
 - Original Package, as provided by RTEMS

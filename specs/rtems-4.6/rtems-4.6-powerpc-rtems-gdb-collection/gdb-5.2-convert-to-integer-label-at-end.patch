@@ -1,0 +1,28 @@
+From 54273454d040ac238b515e241187f478ad831c91 Mon Sep 17 00:00:00 2001
+From: Andrew Cagney <cagney@redhat.com>
+Date: Tue, 27 Jan 2004 13:21:09 +0000
+Subject: [PATCH] 2004-01-27  Andrew Cagney  <cagney@redhat.com>
+
+	* ppc-instructions: Update copyright.
+	(convert_to_integer): Add trailing ";" to label.
+
+This is a variation of the original patch.
+
+---
+ sim/ppc/ppc-instructions |    4 ++--
+ 2 files changed, 7 insertions(+), 2 deletions(-)
+
+diff --git a/sim/ppc/ppc-instructions b/sim/ppc/ppc-instructions
+--- a/sim/ppc/ppc-instructions
++++ b/sim/ppc/ppc-instructions
+@@ -1217,7 +1217,7 @@ void::function::convert_to_integer:cpu *
+ 	    /* FPSCR[fprf] = undefined */
+ 	  }
+ 	/**/
+-	LABEL(Done):
++	LABEL(Done):;
+ 
+ 
+ # extract out raw fields of a FP number
+-- 
+1.7.1

@@ -36,7 +36,7 @@ BuildRoot:	%{_defaultbuildroot}
 %define gdb_target	powerpc-rtems
 
 Name:         %{rpmprefix}%{gdb_target}-gdb-collection
-Release:      1
+Release:      1.0.4%{?dist}
 License:      GPL/LGPL
 Group:        %{rpmgroup}
 
@@ -45,14 +45,16 @@ Packager:     corsepiu@faw.uni-ulm.de and joel@OARcorp.com
 
 Version:      %{gdb_version}
 Summary:      gdb for target %{gdb_version}
-Source0:      ftp://ftp.gnu.org/pub/gnu/gdb-%{gdb_version}.tar.gz
+Source0:      ftp://sourceware.org/pub/gdb/old-releases/gdb-%{gdb_version}.tar.gz
 Patch0:	      gdb-%{gdb_version}-rtems-base-20030211.diff
 Patch1:	      gdb-%{gdb_version}-rtems-cg-20030211.diff
 Patch2:	      gdb-%{gdb_version}-rtems-rdbg-20030211.diff
+Patch3:	      gdb-%{gdb_version}-obstack-1grow-fast-lvalue.patch
+Patch4:	      gdb-%{gdb_version}-multiline-strings.patch
+Patch5:	      gdb-%{gdb_version}-convert-to-integer-label-at-end.patch
+Patch6:	      gdb-%{gdb_version}-remote-sds-getmessage-label-at-end.patch
 
-%if "%{_vendor}" == "redhat"
-BuildPreReq:	ncurses-devel
-%endif
+BuildRequires:	ncurses-devel
 
 #
 # The original sources are not included in the source RPM.
@@ -65,7 +67,21 @@ BuildPreReq:	ncurses-devel
 # your /usr/src/redhat/SOURCES directory ($RPM_SOURCE_DIR).
 # Or you can try the ftp options of rpm :-)
 #
+%if 0%{?nosrcrpm} != 0
 NoSource:      0
+%endif
+
+#
+# binutils builds on x86_64, but powerpc-rtems-ld fails to
+# link some of the RTEMS tests, and also prints 64-bit pointer
+# addresses in disassembly. Use i686 packages on x86_64 architecture
+#
+ExcludeArch: x86_64
+
+## Do not generate debuginfo packages
+%define debug_package %{nil}
+## Do not strip any binaries
+%define __strip /bin/true
 
 #  Account as best possible for targets without simulators
 #  and targets which require extra arguments.
@@ -91,6 +107,10 @@ cd gdb-%{gdb_version}
 %patch0 -p1
 %patch1 -p1
 %patch2 -p1
+%patch3 -p2
+%patch4 -p1
+%patch5 -p1
+%patch6 -p1
 
 %build
 %if "%_sim" == "1"
@@ -131,9 +151,16 @@ test -d build || mkdir build
   rm -rf $RPM_BUILD_ROOT%{_prefix}/info/standards*
  
   # gzip info files
-  gzip -f $RPM_BUILD_ROOT%{_prefix}/info/*.info 2>/dev/null
-  gzip -f $RPM_BUILD_ROOT%{_prefix}/info/*.info-? 2>/dev/null
-  gzip -f $RPM_BUILD_ROOT%{_prefix}/info/*.info-?? 2>/dev/null
+  gzip -9qf $RPM_BUILD_ROOT%{_prefix}/info/*.info 2>/dev/null
+  gzip -9qf $RPM_BUILD_ROOT%{_prefix}/info/*.info-? 2>/dev/null
+  gzip -9qf $RPM_BUILD_ROOT%{_prefix}/info/*.info-?? 2>/dev/null
+
+  # gzip man files
+  gzip -9qf $RPM_BUILD_ROOT%{_mandir}/man?/* 2>/dev/null
+
+# info/dir file is not packaged
+  rm -f $RPM_BUILD_ROOT%{_infodir}/dir
+
 %clean
 # let rpm --clean remove BuildRoot iif using the default BuildRoot
   test $RPM_BUILD_ROOT = "%{_defaultbuildroot}" && \
@@ -234,5 +261,13 @@ This is the GNU gdb for RTEMS targetting %{gdb_target}.
 %endif
 
 %changelog
+* Tue Jul 1 2014 Evgueni Souleimanov <esoule@100500.ca> - 5.2-1.0.4
+- Update rpm tags to match rpm 4.8.0
+- gzip all man pages and info pages
+- fix packaging of info files
+- add patches for building with gcc 4.4.7 on EL6
+- disallow build on x86_64, powerpc-rtems-ld fails to link some RTEMS tests
+- update links to source tarballs
+
 * Fri Sep 5 2003 RTEMS Project - 5.2-1
 - Original Package, as provided by RTEMS
