@@ -1,0 +1,242 @@
+diff -uNr /usr1/rtems/work-tools/original/gcc-3.2.3/boehm-gc/configure.in gcc-3.2.3/boehm-gc/configure.in
+--- /usr1/rtems/work-tools/original/gcc-3.2.3/boehm-gc/configure.in	Mon Jan 27 19:44:36 2003
++++ gcc-3.2.3/boehm-gc/configure.in	Thu Apr 24 08:45:41 2003
+@@ -113,6 +113,10 @@
+ 	;;
+     esac
+     ;;
++ *-*-rtems*)
++    THREADS=posix
++    AC_DEFINE(GC_PTHREADS)
++    ;;
+  win32)
+     AC_DEFINE(GC_WIN32_THREADS)
+     AC_DEFINE(NO_GETENV)
+diff -uNr /usr1/rtems/work-tools/original/gcc-3.2.3/gcc/config/arm/rtems-elf.h gcc-3.2.3/gcc/config/arm/rtems-elf.h
+--- /usr1/rtems/work-tools/original/gcc-3.2.3/gcc/config/arm/rtems-elf.h	Tue Apr 30 14:58:55 2002
++++ gcc-3.2.3/gcc/config/arm/rtems-elf.h	Thu Apr 24 08:45:41 2003
+@@ -26,3 +26,43 @@
+ 
+ #undef CPP_PREDEFINES
+ #define CPP_PREDEFINES "-D__rtems__ -D__ELF__ -Asystem=rtems"
++
++/* Redefine it to be independent of any defaults */
++#undef TARGET_DEFAULT
++#define TARGET_DEFAULT  (ARM_FLAG_SOFT_FLOAT | ARM_FLAG_APCS_32 | ARM_FLAG_APCS_FRAME)
++
++/* Because TARGET_DEFAULT sets ARM_FLAG_SOFT_FLOAT */
++#undef CPP_FLOAT_DEFAULT_SPEC
++#define CPP_FLOAT_DEFAULT_SPEC "-D__SOFTFP__"
++
++/*
++ * Upward compatibility hacks: 
++ * Once gcc has adopted subtarget_asm_float_spec in arm/elf.h 
++ * the code below needs to be revisited.
++ * Only SUBTARGET_ASM_FLOAT_SPEC should be needed then.
++ */
++#undef ASM_SPEC
++#define ASM_SPEC "\
++%{mbig-endian:-EB} \
++%{mlittle-endian:-EL} \
++%{mcpu=*:-mcpu=%*} \
++%{march=*:-march=%*} \
++%{mapcs-*:-mapcs-%*} \
++%(subtarget_asm_float_spec) \
++%{mthumb-interwork:-mthumb-interwork} \
++%(subtarget_extra_asm_spec)"
++
++/* Because TARGET_DEFAULT sets ARM_FLAG_SOFT_FLOAT */
++#undef SUBTARGET_ASM_FLOAT_SPEC
++#define SUBTARGET_ASM_FLOAT_SPEC	\
++  "%{mhard-float: } \
++   %{mapcs-float:-mfloat } \
++   %{msoft-float:-mno-fpu} \
++   %{!mhard-float: \
++     %{!apcs-float: \
++       %{!msoft-float:-mno-fpu}}}"
++
++#undef SUBTARGET_EXTRA_SPECS
++#define SUBTARGET_EXTRA_SPECS				\
++  { "subtarget_extra_asm_spec", SUBTARGET_EXTRA_ASM_SPEC }, \
++  { "subtarget_asm_float_spec", SUBTARGET_ASM_FLOAT_SPEC },
+diff -uNr /usr1/rtems/work-tools/original/gcc-3.2.3/gcc/config/arm/t-rtems gcc-3.2.3/gcc/config/arm/t-rtems
+--- /usr1/rtems/work-tools/original/gcc-3.2.3/gcc/config/arm/t-rtems	Wed Dec 31 18:00:00 1969
++++ gcc-3.2.3/gcc/config/arm/t-rtems	Thu Apr 24 08:45:41 2003
+@@ -0,0 +1,4 @@
++MULTILIB_OPTIONS     = marm/mthumb msoft-float/mhard-float
++MULTILIB_DIRNAMES    = arm thumb soft fpu
++MULTILIB_EXCEPTIONS  = 
++MULTILIB_MATCHES = marm=mno-thumb
+diff -uNr /usr1/rtems/work-tools/original/gcc-3.2.3/gcc/config/rtems.h gcc-3.2.3/gcc/config/rtems.h
+--- /usr1/rtems/work-tools/original/gcc-3.2.3/gcc/config/rtems.h	Fri Apr 19 13:40:33 2002
++++ gcc-3.2.3/gcc/config/rtems.h	Tue Oct 21 08:02:06 2003
+@@ -35,3 +35,15 @@
+ 
+ #undef ENDFILE_SPEC
+ #define ENDFILE_SPEC   ""
++
++/*
++ * Some targets do not set up LIB_SPECS, override it, here.
++ */
++#define STD_LIB_SPEC "%{!shared:%{g*:-lg} %{!p:%{!pg:-lc}}%{p:-lc_p}%{pg:-lc_p}}"
++
++#undef LIB_SPEC
++#define LIB_SPEC "%{!qrtems: " STD_LIB_SPEC "} " \
++"%{!nostdlib: %{qrtems: --start-group \
++ %{!qrtems_debug: -lrtemsbsp -lrtemscpu} \
++ %{qrtems_debug: -lrtemsbsp_g -lrtemscpu_g} \
++ -lc -gcc --end-group %{!qnolinkcmds: -T linkcmds%s}}}"
+diff -uNr /usr1/rtems/work-tools/original/gcc-3.2.3/gcc/config.gcc gcc-3.2.3/gcc/config.gcc
+--- /usr1/rtems/work-tools/original/gcc-3.2.3/gcc/config.gcc	Fri Feb 28 12:38:19 2003
++++ gcc-3.2.3/gcc/config.gcc	Thu Apr 24 08:45:41 2003
+@@ -746,7 +746,7 @@
+ arm*-*-rtems*)
+ 	xm_defines=POSIX
+ 	tm_file="dbxelf.h elfos.h arm/unknown-elf.h arm/elf.h arm/aout.h arm/arm.h arm/rtems-elf.h rtems.h"
+-	tmake_file="arm/t-arm-elf t-rtems"
++	tmake_file="arm/t-arm-elf arm/t-rtems t-rtems"
+ 	if test x$enable_threads = xyes; then
+ 	  thread_file='rtems'
+ 	fi
+diff -uNr /usr1/rtems/work-tools/original/gcc-3.2.3/gcc/cppdefault.h gcc-3.2.3/gcc/cppdefault.h
+--- /usr1/rtems/work-tools/original/gcc-3.2.3/gcc/cppdefault.h	Sun Oct  7 11:50:51 2001
++++ gcc-3.2.3/gcc/cppdefault.h	Wed May  7 16:21:00 2003
+@@ -38,6 +38,7 @@
+ #undef LOCAL_INCLUDE_DIR
+ #undef SYSTEM_INCLUDE_DIR
+ #undef STANDARD_INCLUDE_DIR
++#undef PREFIX_INCLUDE_DIR
+ #else
+ #undef CROSS_INCLUDE_DIR
+ #endif
+diff -uNr /usr1/rtems/work-tools/original/gcc-3.2.3/gcc/gthr-rtems.h gcc-3.2.3/gcc/gthr-rtems.h
+--- /usr1/rtems/work-tools/original/gcc-3.2.3/gcc/gthr-rtems.h	Wed Jan 29 09:57:53 2003
++++ gcc-3.2.3/gcc/gthr-rtems.h	Tue Apr 20 14:17:52 2004
+@@ -37,7 +37,6 @@
+ #define __GTHREADS 1
+ 
+ #define __GTHREAD_ONCE_INIT  0
+-#define __GTHREAD_MUTEX_INIT 0
+ #define __GTHREAD_MUTEX_INIT_FUNCTION  rtems_gxx_mutex_init
+ 
+ /* avoid depedency on rtems specific headers */
+diff -uNr /usr1/rtems/work-tools/original/gcc-3.2.3/libffi/configure.in gcc-3.2.3/libffi/configure.in
+--- /usr1/rtems/work-tools/original/gcc-3.2.3/libffi/configure.in	Mon Jan 27 19:43:56 2003
++++ gcc-3.2.3/libffi/configure.in	Thu Apr 24 08:45:41 2003
+@@ -67,6 +67,13 @@
+ powerpc-*-aix*) TARGET=POWERPC_AIX; TARGETDIR=powerpc;;
+ rs6000-*-aix*) TARGET=POWERPC_AIX; TARGETDIR=powerpc;;
+ arm*-*-linux-*) TARGET=ARM; TARGETDIR=arm;;
++arm*-*-rtems*) TARGET=ARM; TARGETDIR=arm ;;
++i*86-*-rtems*) TARGET=X86; TARGETDIR=x86 ;;
++m68k-*-rtems*) TARGET=M68K; TARGETDIR=m68k ;;
++mips*-*-rtems*) TARGET=MIPS; TARGETDIR=mips ;;
++powerpc-*-rtems*) TARGET=POWERPC; TARGETDIR=powerpc ;;
++sparc*-*-rtems*) TARGET=SPARC; TARGETDIR=sparc ;;
++h8300-rtems* | hppa1.1-*-rtems* | i960-*-rtems* | sh-*-rtems*) ;;
+ esac
+ 
+ if test $TARGETDIR = unknown; then
+diff -uNr /usr1/rtems/work-tools/original/gcc-3.2.3/libjava/configure.in gcc-3.2.3/libjava/configure.in
+--- /usr1/rtems/work-tools/original/gcc-3.2.3/libjava/configure.in	Mon Jan 27 19:44:39 2003
++++ gcc-3.2.3/libjava/configure.in	Thu Apr 24 08:45:41 2003
+@@ -352,6 +352,9 @@
+ 	;;
+     esac
+     ;;
++ rtems)
++    THREADS=posix
++    ;;
+  win32)
+     ;;
+  decosf1 | irix | mach | os2 | solaris | dce | vxworks)
+@@ -372,6 +375,9 @@
+ case "$THREADS" in
+  posix)
+     case "$host" in
++     *-*-rtems*)
++	# Don't set THREADLIBS here.  RTEMS doesn't have -lpthread.
++	;;
+      *-*-cygwin*)
+ 	# Don't set THREADLIBS here.  Cygwin doesn't have -lpthread.
+ 	;;
+diff -uNr /usr1/rtems/work-tools/original/gcc-3.2.3/libstdc++-v3/config/cpu/i386/bits/atomicity.h gcc-3.2.3/libstdc++-v3/config/cpu/i386/bits/atomicity.h
+--- /usr1/rtems/work-tools/original/gcc-3.2.3/libstdc++-v3/config/cpu/i386/bits/atomicity.h	Tue Feb 27 18:14:15 2001
++++ gcc-3.2.3/libstdc++-v3/config/cpu/i386/bits/atomicity.h	Wed May  7 13:03:05 2003
+@@ -1,6 +1,6 @@
+-// Low-level functions for atomic operations: x86, x < 4 version  -*- C++ -*-
++// Low-level functions for atomic operations: x86, x >= 3 version  -*- C++ -*-
+ 
+-// Copyright (C) 1999, 2000, 2001 Free Software Foundation, Inc.
++// Copyright (C) 1999, 2000, 2001, 2003 Free Software Foundation, Inc.
+ //
+ // This file is part of the GNU ISO C++ Library.  This library is free
+ // software; you can redistribute it and/or modify it under the
+@@ -32,15 +32,36 @@
+ 
+ typedef int _Atomic_word;
+ 
++template <int __inst>
++struct __Atomicity_lock
++{
++  static volatile _Atomic_word _S_atomicity_lock;
++};
++
++template <int __inst>
++volatile _Atomic_word __Atomicity_lock<__inst>::_S_atomicity_lock = 0;
++
++template volatile _Atomic_word __Atomicity_lock<0>::_S_atomicity_lock;
++
+ static inline _Atomic_word 
+ __attribute__ ((__unused__))
+ __exchange_and_add (volatile _Atomic_word *__mem, int __val)
+ {
+-  register _Atomic_word __result;
+-  __asm__ __volatile__ ("lock; xaddl %0,%2"
+-			: "=r" (__result) 
+-                        : "0" (__val), "m" (*__mem) 
+-                        : "memory");
++  register _Atomic_word __result, __tmp = 1;
++
++  /* obtain the atomic exchange/add spin lock */
++  do {
++    __asm__ __volatile__ ("xchgl %0,%1"
++			  : "+m" (__Atomicity_lock<0>::_S_atomicity_lock),
++			    "+r" (__tmp));
++  } while (__tmp);
++
++  __result = *__mem;
++  *__mem += __val;
++
++  /* release spin lock */
++  __Atomicity_lock<0>::_S_atomicity_lock = 0;
++
+   return __result;
+ }
+ 
+@@ -48,12 +69,7 @@
+ __attribute__ ((__unused__))
+ __atomic_add (volatile _Atomic_word* __mem, int __val)
+ {
+-  __asm__ __volatile__ ("lock; addl %0,%1"
+-			: : "ir" (__val), "m" (*__mem) : "memory");
++  __exchange_and_add (__mem, __val);
+ }
+ 
+ #endif /* atomicity.h */
+-
+-
+-
+-
+diff -uNr /usr1/rtems/work-tools/original/gcc-3.2.3/libstdc++-v3/include/bits/locale_facets.tcc gcc-3.2.3/libstdc++-v3/include/bits/locale_facets.tcc
+--- /usr1/rtems/work-tools/original/gcc-3.2.3/libstdc++-v3/include/bits/locale_facets.tcc	Mon Jan  6 09:51:48 2003
++++ gcc-3.2.3/libstdc++-v3/include/bits/locale_facets.tcc	Thu Apr 24 08:45:41 2003
+@@ -44,6 +44,8 @@
+ #include <bits/streambuf_iterator.h>
+ #include <typeinfo>  // For bad_cast.
+ 
++extern "C" char *strdup(const char *);
++
+ namespace std
+ {
+   template<typename _Facet>

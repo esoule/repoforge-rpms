@@ -1,0 +1,709 @@
+diff -Naur gdb-5.2-rtemsbase/gdb/162bug-rom.c gdb-5.2-PLUS_CG/gdb/162bug-rom.c
+--- gdb-5.2-rtemsbase/gdb/162bug-rom.c	Wed Dec 31 18:00:00 1969
++++ gdb-5.2-PLUS_CG/gdb/162bug-rom.c	Mon Jun 10 15:32:21 2002
+@@ -0,0 +1,178 @@
++/* Remote debugging interface for 162bug Rom monitor for GDB, the GNU debugger.
++   Copyright 1995, 1996, 1998, 2000 Free Software Foundation, Inc.
++
++   Adapted by Joel Sherrill <joel.sherrill@OARcorp.com>
++   from 167bug-rom.c written by Charles-Antoine Gauthier
++   <charles.gauthier@nrc.ca> which was adapted from
++   abug-rom.c written by Rob Savoye of Cygnus Support
++
++This file is part of GDB.
++
++This program is free software; you can redistribute it and/or modify
++it under the terms of the GNU General Public License as published by
++the Free Software Foundation; either version 2 of the License, or
++(at your option) any later version.
++
++This program is distributed in the hope that it will be useful,
++but WITHOUT ANY WARRANTY; without even the implied warranty of
++MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++GNU General Public License for more details.
++
++You should have received a copy of the GNU General Public License
++along with this program; if not, write to the Free Software
++Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.  */
++
++#include "defs.h"
++#include "gdbcore.h"
++#include "target.h"
++#include "monitor.h"
++#include "serial.h"
++
++/* Prototypes for local functions. */
++
++static void m162bug_open (char *args, int from_tty);
++
++static void
++m162bug_supply_register (regname, regnamelen, val, vallen)
++     char *regname;
++     int regnamelen;
++     char *val;
++     int vallen;
++{
++  int regno;
++  char *terminated_val;
++
++  if (regnamelen != 2)
++    return;
++
++  switch (regname[0])
++    {
++    case 'S':
++      if (regname[1] != 'R')
++	return;
++      regno = PS_REGNUM;
++      break;
++    case 'P':
++      if (regname[1] != 'C')
++	return;
++      regno = PC_REGNUM;
++      break;
++    case 'D':
++      if (regname[1] < '0' || regname[1] > '7')
++	return;
++      regno = regname[1] - '0' + D0_REGNUM;
++      break;
++    case 'A':
++      if (regname[1] < '0' || regname[1] > '7')
++	return;
++      regno = regname[1] - '0' + A0_REGNUM;
++      break;
++    default:
++      return;
++    }
++
++  terminated_val = (char *) xmalloc(vallen + 1);
++  strncpy (terminated_val, val, vallen);
++  monitor_supply_register (regno, terminated_val);
++  free(terminated_val);
++}
++
++/*
++ * This array of registers needs to match the indexes used by GDB. The
++ * whole reason this exists is because the various ROM monitors use
++ * different names than GDB does, and don't support all the
++ * registers either. So, typing "info reg sp" becomes an "A7".
++ */
++
++static char *m162bug_regnames[NUM_REGS] =
++{
++  "D0", "D1", "D2", "D3", "D4", "D5", "D6", "D7",
++  "A0", "A1", "A2", "A3", "A4", "A5", "A6", "A7",
++  "SR", "PC",
++  "FP0", "FP1", "FP2", "FP3", "FP4", "FP5", "FP6", "FP7",
++  "FPCR", "FPSR", "FPIAR"
++};
++
++/*
++ * Define the monitor command strings. Since these are passed directly
++ * through to a printf style function, we need can include formatting
++ * strings. We also need a CR or LF on the end.
++ */
++
++static struct target_ops m162bug_ops;
++
++static char *m162bug_inits[] = {"\r", NULL};
++
++static struct monitor_ops m162bug_cmds ;
++
++static void 
++init_m162bug_cmds(void)
++{
++  m162bug_cmds.flags =   MO_CLR_BREAK_USES_ADDR;
++  m162bug_cmds.init =   m162bug_inits;			/* Init strings */
++  m162bug_cmds.cont =   "g\r";			/* continue command */
++  m162bug_cmds.step =   "t\r";			/* single step */
++  m162bug_cmds.stop =   NULL;				/* interrupt command */
++  m162bug_cmds.set_break =   "br %x\r";			/* set a breakpoint */
++  m162bug_cmds.clr_break =   "nobr %x\r";			/* clear a breakpoint */
++  m162bug_cmds.clr_all_break =   "nobr\r";			/* clear all breakpoints */
++  m162bug_cmds.fill =   "bf %x:%x %x;b\r";		/* fill (start count val) */
++  m162bug_cmds.setmem.cmdb =     "mw %x %02x;b\r";		/* setmem.cmdb (addr, value) */
++  m162bug_cmds.setmem.cmdw =     "mw %x %04x;w\r";		/* setmem.cmdw (addr, value) */
++  m162bug_cmds.setmem.cmdl =     "mw %x %08x;l\r";		/* setmem.cmdl (addr, value) */
++  m162bug_cmds.setmem.cmdll =     NULL;			/* setmem.cmdll (addr, value) */
++  m162bug_cmds.setmem.resp_delim =     NULL;			/* setreg.resp_delim */
++  m162bug_cmds.setmem.term =     NULL;			/* setreg.term */
++  m162bug_cmds.setmem.term_cmd =     NULL;			/* setreg.term_cmd */
++  m162bug_cmds.getmem.cmdb =     "md %x:%x;b\r";		/* getmem.cmdb (addr, len) */
++  m162bug_cmds.getmem.cmdw =     "md %x:%x;b\r";		/* getmem.cmdw (addr, len) */
++  m162bug_cmds.getmem.cmdl =     "md %x:%x;b\r";		/* getmem.cmdl (addr, len) */
++  m162bug_cmds.getmem.cmdll =     NULL;			/* getmem.cmdll (addr, len) */
++  m162bug_cmds.getmem.resp_delim =     " ";			/* getmem.resp_delim */
++  m162bug_cmds.getmem.term =     NULL;			/* getmem.term */
++  m162bug_cmds.getmem.term_cmd =     NULL;			/* getmem.term_cmd */
++  m162bug_cmds.setreg.cmd =     "rs %s %x\r";		/* setreg.cmd (name, value) */
++  m162bug_cmds.setreg.resp_delim =    NULL ;			/* setreg.resp_delim */
++  m162bug_cmds.setreg.term =     NULL;			/* setreg.term */
++  m162bug_cmds.setreg.term_cmd =     NULL	;		/* setreg.term_cmd */
++  m162bug_cmds.getreg.cmd =     "rm %s\r";			/* getreg.cmd (name) */
++  m162bug_cmds.getreg.resp_delim =     "=";			/* getreg.resp_delim */
++  m162bug_cmds.getreg.term =     "? ";			/* getreg.term */
++  m162bug_cmds.getreg.term_cmd =     ".\r"	;		/* getreg.term_cmd */
++    m162bug_cmds.dump_registers =   "rd\r";			/* dump_registers */
++  m162bug_cmds.register_pattern =   "\\(\\w+\\) +=\\([0-9a-fA-F]+\\b\\)"; /* register_pattern */
++  m162bug_cmds.supply_register =   m162bug_supply_register;	/* supply_register */
++  m162bug_cmds.load_routine =   NULL;				/* load_routine (defaults to SRECs) */
++  m162bug_cmds.load =   "lo 0\r";			/* download command */
++  m162bug_cmds.loadresp =   "\n";				/* load response */
++  m162bug_cmds.prompt =   "162-Bug>";			/* monitor command prompt */
++  m162bug_cmds.line_term =   "\r";				/* end-of-line terminator */
++  m162bug_cmds.cmd_end =   NULL;				/* optional command terminator */
++  m162bug_cmds.target =   &m162bug_ops;			/* target operations */
++  m162bug_cmds.stopbits =   SERIAL_1_STOPBITS;		/* number of stop bits */
++  m162bug_cmds.regnames =   m162bug_regnames;		/* registers names */
++  m162bug_cmds.magic =   MONITOR_OPS_MAGIC	;	/* magic */
++}; 
++
++static void
++m162bug_open(args, from_tty)
++     char *args;
++     int from_tty;
++{
++  monitor_open (args, &m162bug_cmds, from_tty);
++}
++
++void
++_initialize_m162bug_rom ()
++{
++  init_m162bug_cmds() ;
++  init_monitor_ops (&m162bug_ops);
++
++  m162bug_ops.to_shortname = "162bug";
++  m162bug_ops.to_longname = "162bug monitor";
++  m162bug_ops.to_doc = "Debug via the 162bug monitor.\n\
++Specify the serial device it is connected to (e.g. /dev/ttya).";
++  m162bug_ops.to_open = m162bug_open;
++
++  add_target (&m162bug_ops);
++}
+diff -Naur gdb-5.2-rtemsbase/gdb/167bug-rom.c gdb-5.2-PLUS_CG/gdb/167bug-rom.c
+--- gdb-5.2-rtemsbase/gdb/167bug-rom.c	Wed Dec 31 18:00:00 1969
++++ gdb-5.2-PLUS_CG/gdb/167bug-rom.c	Mon Jun 10 15:32:21 2002
+@@ -0,0 +1,176 @@
++/* Remote debugging interface for 167bug Rom monitor for GDB, the GNU debugger.
++   Copyright 1995, 1996, 1998 Free Software Foundation, Inc.
++
++   Adapted by Charles-Antoine Gauthier <charles.gauthier@nrc.ca>
++   from abug-rom.c written by Rob Savoye of Cygnus Support
++
++This file is part of GDB.
++
++This program is free software; you can redistribute it and/or modify
++it under the terms of the GNU General Public License as published by
++the Free Software Foundation; either version 2 of the License, or
++(at your option) any later version.
++
++This program is distributed in the hope that it will be useful,
++but WITHOUT ANY WARRANTY; without even the implied warranty of
++MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++GNU General Public License for more details.
++
++You should have received a copy of the GNU General Public License
++along with this program; if not, write to the Free Software
++Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.  */
++
++#include "defs.h"
++#include "gdbcore.h"
++#include "target.h"
++#include "monitor.h"
++#include "serial.h"
++
++/* Prototypes for local functions. */
++
++static void m167bug_open (char *args, int from_tty);
++
++static void
++m167bug_supply_register (regname, regnamelen, val, vallen)
++     char *regname;
++     int regnamelen;
++     char *val;
++     int vallen;
++{
++  int regno;
++  char *terminated_val;
++
++  if (regnamelen != 2)
++    return;
++
++  switch (regname[0])
++    {
++    case 'S':
++      if (regname[1] != 'R')
++	return;
++      regno = PS_REGNUM;
++      break;
++    case 'P':
++      if (regname[1] != 'C')
++	return;
++      regno = PC_REGNUM;
++      break;
++    case 'D':
++      if (regname[1] < '0' || regname[1] > '7')
++	return;
++      regno = regname[1] - '0' + D0_REGNUM;
++      break;
++    case 'A':
++      if (regname[1] < '0' || regname[1] > '7')
++	return;
++      regno = regname[1] - '0' + A0_REGNUM;
++      break;
++    default:
++      return;
++    }
++
++  terminated_val = (char *) xmalloc(vallen + 1);
++  strncpy (terminated_val, val, vallen);
++  monitor_supply_register (regno, terminated_val);
++  free(terminated_val);
++}
++
++/*
++ * This array of registers needs to match the indexes used by GDB. The
++ * whole reason this exists is because the various ROM monitors use
++ * different names than GDB does, and don't support all the
++ * registers either. So, typing "info reg sp" becomes an "A7".
++ */
++
++static char *m167bug_regnames[NUM_REGS] =
++{
++  "D0", "D1", "D2", "D3", "D4", "D5", "D6", "D7",
++  "A0", "A1", "A2", "A3", "A4", "A5", "A6", "A7",
++  "SR", "PC",
++  "FP0", "FP1", "FP2", "FP3", "FP4", "FP5", "FP6", "FP7",
++  "FPCR", "FPSR", "FPIAR"
++};
++
++/*
++ * Define the monitor command strings. Since these are passed directly
++ * through to a printf style function, we need can include formatting
++ * strings. We also need a CR or LF on the end.
++ */
++
++static struct target_ops m167bug_ops;
++
++static char *m167bug_inits[] = {"\r", NULL};
++
++static struct monitor_ops m167bug_cmds ;
++
++static void 
++init_m167bug_cmds(void)
++{
++  m167bug_cmds.flags =   MO_CLR_BREAK_USES_ADDR;
++  m167bug_cmds.init =   m167bug_inits;			/* Init strings */
++  m167bug_cmds.cont =   "g\r";			/* continue command */
++  m167bug_cmds.step =   "t\r";			/* single step */
++  m167bug_cmds.stop =   NULL;				/* interrupt command */
++  m167bug_cmds.set_break =   "br %x\r";			/* set a breakpoint */
++  m167bug_cmds.clr_break =   "nobr %x\r";			/* clear a breakpoint */
++  m167bug_cmds.clr_all_break =   "nobr\r";			/* clear all breakpoints */
++  m167bug_cmds.fill =   "bf %x:%x %x;b\r";		/* fill (start count val) */
++  m167bug_cmds.setmem.cmdb =     "mw %x %02x;b\r";		/* setmem.cmdb (addr, value) */
++  m167bug_cmds.setmem.cmdw =     "mw %x %04x;w\r";		/* setmem.cmdw (addr, value) */
++  m167bug_cmds.setmem.cmdl =     "mw %x %08x;l\r";		/* setmem.cmdl (addr, value) */
++  m167bug_cmds.setmem.cmdll =     NULL;			/* setmem.cmdll (addr, value) */
++  m167bug_cmds.setmem.resp_delim =     NULL;			/* setreg.resp_delim */
++  m167bug_cmds.setmem.term =     NULL;			/* setreg.term */
++  m167bug_cmds.setmem.term_cmd =     NULL;			/* setreg.term_cmd */
++  m167bug_cmds.getmem.cmdb =     "md %x:%x;b\r";		/* getmem.cmdb (addr, len) */
++  m167bug_cmds.getmem.cmdw =     "md %x:%x;b\r";		/* getmem.cmdw (addr, len) */
++  m167bug_cmds.getmem.cmdl =     "md %x:%x;b\r";		/* getmem.cmdl (addr, len) */
++  m167bug_cmds.getmem.cmdll =     NULL;			/* getmem.cmdll (addr, len) */
++  m167bug_cmds.getmem.resp_delim =     " ";			/* getmem.resp_delim */
++  m167bug_cmds.getmem.term =     NULL;			/* getmem.term */
++  m167bug_cmds.getmem.term_cmd =     NULL;			/* getmem.term_cmd */
++  m167bug_cmds.setreg.cmd =     "rs %s %x\r";		/* setreg.cmd (name, value) */
++  m167bug_cmds.setreg.resp_delim =    NULL ;			/* setreg.resp_delim */
++  m167bug_cmds.setreg.term =     NULL;			/* setreg.term */
++  m167bug_cmds.setreg.term_cmd =     NULL	;		/* setreg.term_cmd */
++  m167bug_cmds.getreg.cmd =     "rm %s\r";			/* getreg.cmd (name) */
++  m167bug_cmds.getreg.resp_delim =     "=";			/* getreg.resp_delim */
++  m167bug_cmds.getreg.term =     "? ";			/* getreg.term */
++  m167bug_cmds.getreg.term_cmd =     ".\r"	;		/* getreg.term_cmd */
++    m167bug_cmds.dump_registers =   "rd\r";			/* dump_registers */
++  m167bug_cmds.register_pattern =   "\\(\\w+\\) +=\\([0-9a-fA-F]+\\b\\)"; /* register_pattern */
++  m167bug_cmds.supply_register =   m167bug_supply_register;	/* supply_register */
++  m167bug_cmds.load_routine =   NULL;				/* load_routine (defaults to SRECs) */
++  m167bug_cmds.load =   "lo 0\r";			/* download command */
++  m167bug_cmds.loadresp =   "\n";				/* load response */
++  m167bug_cmds.prompt =   "167-Bug>";			/* monitor command prompt */
++  m167bug_cmds.line_term =   "\r";				/* end-of-line terminator */
++  m167bug_cmds.cmd_end =   NULL;				/* optional command terminator */
++  m167bug_cmds.target =   &m167bug_ops;			/* target operations */
++  m167bug_cmds.stopbits =   SERIAL_1_STOPBITS;		/* number of stop bits */
++  m167bug_cmds.regnames =   m167bug_regnames;		/* registers names */
++  m167bug_cmds.magic =   MONITOR_OPS_MAGIC	;	/* magic */
++}; 
++
++static void
++m167bug_open(args, from_tty)
++     char *args;
++     int from_tty;
++{
++  monitor_open (args, &m167bug_cmds, from_tty);
++}
++
++void
++_initialize_m167bug_rom ()
++{
++  init_m167bug_cmds() ;
++  init_monitor_ops (&m167bug_ops);
++
++  m167bug_ops.to_shortname = "167bug";
++  m167bug_ops.to_longname = "167bug monitor";
++  m167bug_ops.to_doc = "Debug via the 167bug monitor.\n\
++Specify the serial device it is connected to (e.g. /dev/ttya).";
++  m167bug_ops.to_open = m167bug_open;
++
++  add_target (&m167bug_ops);
++}
+diff -Naur gdb-5.2-rtemsbase/gdb/Makefile.in gdb-5.2-PLUS_CG/gdb/Makefile.in
+--- gdb-5.2-rtemsbase/gdb/Makefile.in	Mon Jun 10 15:18:30 2002
++++ gdb-5.2-PLUS_CG/gdb/Makefile.in	Mon Jun 10 15:32:05 2002
+@@ -1831,6 +1831,9 @@
+ 	$(gdbcmd_h) $(inferior_h) $(target_h) $(serial_h) $(terminal_h) \
+ 	$(regcache_h)
+ 
++eppcbug-rom.o: eppcbug-rom.c monitor.h $(bfd_h) $(wait_h) $(defs_h) $(gdbcmd_h) \
++	$(inferior_h) target.h serial.h terminal.h
++
+ printcmd.o: printcmd.c $(breakpoint_h) $(defs_h) $(expression_h) \
+ 	$(gdbcmd_h) $(gdbcore_h) $(gdbtypes_h) $(language_h) $(objfiles_h) \
+ 	$(symfile_h) $(symtab_h) $(target_h) $(gdb_string_h) $(ui_out_h) \
+diff -Naur gdb-5.2-rtemsbase/gdb/config/m68k/monitor.mt gdb-5.2-PLUS_CG/gdb/config/m68k/monitor.mt
+--- gdb-5.2-rtemsbase/gdb/config/m68k/monitor.mt	Mon Jun 10 15:18:33 2002
++++ gdb-5.2-PLUS_CG/gdb/config/m68k/monitor.mt	Mon Jun 10 15:32:07 2002
+@@ -1,3 +1,3 @@
+ # Target: Motorola m68k embedded (EST emulator, rom68k and bug monitors)
+-TDEPFILES= m68k-tdep.o monitor.o remote-est.o cpu32bug-rom.o rom68k-rom.o abug-rom.o dbug-rom.o dsrec.o
++TDEPFILES= m68k-tdep.o monitor.o remote-est.o cpu32bug-rom.o rom68k-rom.o abug-rom.o dbug-rom.o dsrec.o 162bug-rom.o 167bug-rom.o
+ TM_FILE= tm-monitor.h
+diff -Naur gdb-5.2-rtemsbase/gdb/config/powerpc/ppc-eabi.mt gdb-5.2-PLUS_CG/gdb/config/powerpc/ppc-eabi.mt
+--- gdb-5.2-rtemsbase/gdb/config/powerpc/ppc-eabi.mt	Mon Jun 10 15:18:34 2002
++++ gdb-5.2-PLUS_CG/gdb/config/powerpc/ppc-eabi.mt	Mon Jun 10 15:32:08 2002
+@@ -1,3 +1,3 @@
+ # Target: PowerPC running eabi
+-TDEPFILES= rs6000-tdep.o monitor.o dsrec.o ppcbug-rom.o dink32-rom.o ppc-bdm.o ocd.o remote-sds.o ppc-linux-tdep.o solib.o solib-svr4.o ppc2dink32-rom.o
++TDEPFILES= rs6000-tdep.o monitor.o dsrec.o ppcbug-rom.o dink32-rom.o ppc-bdm.o ocd.o remote-sds.o ppc-linux-tdep.o solib.o solib-svr4.o ppc2dink32-rom.o eppcbug-rom.o
+ TM_FILE= tm-ppc-eabi.h
+diff -Naur gdb-5.2-rtemsbase/gdb/config/powerpc/ppc-sim.mt gdb-5.2-PLUS_CG/gdb/config/powerpc/ppc-sim.mt
+--- gdb-5.2-rtemsbase/gdb/config/powerpc/ppc-sim.mt	Mon Jun 10 15:18:34 2002
++++ gdb-5.2-PLUS_CG/gdb/config/powerpc/ppc-sim.mt	Mon Jun 10 15:32:08 2002
+@@ -1,5 +1,5 @@
+ # Target: PowerPC running eabi and including the simulator
+-TDEPFILES= rs6000-tdep.o monitor.o dsrec.o ppcbug-rom.o dink32-rom.o ppc-bdm.o ocd.o remote-sds.o ppc-linux-tdep.o solib.o solib-svr4.o ppc2dink32-rom.o
++TDEPFILES= rs6000-tdep.o monitor.o dsrec.o ppcbug-rom.o dink32-rom.o ppc-bdm.o ocd.o remote-sds.o ppc-linux-tdep.o solib.o solib-svr4.o ppc2dink32-rom.o eppcbug-rom.o
+ TM_FILE= tm-ppc-eabi.h
+ 
+ SIM_OBS = remote-sim.o
+diff -Naur gdb-5.2-rtemsbase/gdb/eppcbug-rom.c gdb-5.2-PLUS_CG/gdb/eppcbug-rom.c
+--- gdb-5.2-rtemsbase/gdb/eppcbug-rom.c	Wed Dec 31 18:00:00 1969
++++ gdb-5.2-PLUS_CG/gdb/eppcbug-rom.c	Mon Jun 10 15:32:21 2002
+@@ -0,0 +1,304 @@
++/* Remote debugging interface for PPCbug (PowerPC) Rom monitor
++   for GDB, the GNU debugger.
++   Copyright 1995 Free Software Foundation, Inc.
++
++   Adapted by Charles-Antoine Gauthier <charles.gauthier@nrc.ca>
++   from ppcbug-rom.c written by Stu Grossman of Cygnus Support
++
++This file is part of GDB.
++
++This program is free software; you can redistribute it and/or modify
++it under the terms of the GNU General Public License as published by
++the Free Software Foundation; either version 2 of the License, or
++(at your option) any later version.
++
++This program is distributed in the hope that it will be useful,
++but WITHOUT ANY WARRANTY; without even the implied warranty of
++MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++GNU General Public License for more details.
++
++You should have received a copy of the GNU General Public License
++along with this program; if not, write to the Free Software
++Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.  */
++
++#include "defs.h"
++#include "gdbcore.h"
++#include "target.h"
++#include "monitor.h"
++#include "serial.h"
++
++static void eppcbug_open PARAMS ((char *args, int from_tty));
++
++static void
++eppcbug_supply_register (regname, regnamelen, val, vallen)
++     char *regname;
++     int regnamelen;
++     char *val;
++     int vallen;
++{
++  int regno = 0, base = 0;
++  char *terminated_val;
++
++  if (regnamelen < 2 || regnamelen > 6)
++    return;
++
++  switch (regname[0])
++    {
++    case 'R':
++      if (regname[1] < '0' || regname[1] > '9')
++	return;
++      if (regnamelen == 2)
++	regno = regname[1] - '0';
++      else if (regnamelen == 3 && regname[2] >= '0' && regname[2] <= '9')
++	regno = (regname[1] - '0') * 10 + (regname[2] - '0');
++      else
++	return;
++      break;
++    case 'F':
++      if (regname[1] != 'R' || regname[2] < '0' || regname[2] > '9')
++	return;
++      if (regnamelen == 3)
++	regno = 32 + regname[2] - '0';
++      else if (regnamelen == 4 && regname[3] >= '0' && regname[3] <= '9')
++	regno = 32 + (regname[2] - '0') * 10 + (regname[3] - '0');
++      else
++	return;
++      break;
++    case 'I':
++      if (regnamelen != 2 || regname[1] != 'P')
++	return;
++      regno = 64;
++      break;
++    case 'M':
++      if (regnamelen != 3 || regname[1] != 'S' || regname[2] != 'R')
++	return;
++      regno = 65;
++      break;
++    case 'C':
++      if (regnamelen != 2 || regname[1] != 'R')
++	return;
++      regno = 66;
++      break;
++    case 'S':
++      if (regname[1] != 'P' || regname[2] != 'R')
++	return;
++      if (regnamelen == 4) {
++        if (regname[3] == '8')
++	  regno = 67;
++        else if (regname[3] == '9')
++	  regno = 68;
++        else if (regname[3] == '1')
++	  regno = 69;
++        else if (regname[3] == '0')
++	  regno = 70;
++        else
++	  return;
++      }
++      else if (regnamelen == 5) {
++        if (regname[3] == '1') {
++          if (regname[4] == '8')
++            regno = 71;
++          else if (regname[4] == '9')
++            regno = 72;
++          else
++            return;
++        } /* if (regname[3] == '1') */
++        else if (regname[3] == '2' ) {
++           if (regname[4] == '2')
++            regno = 73;
++          else if (regname[4] == '6')
++            regno = 75;
++          else if (regname[4] == '7')
++            regno = 75;
++          else
++            return;
++        } /* if (regname[3] == '2') */
++      else
++        return; /* regname[3] != '1' && regname[3] != '2' */
++      }
++      else if (regnamelen == 6) {
++        if (regname[3] == '2') {
++          if (regname[4] == '6') {
++            if (regname[5] == '8' )
++	      regno = 76;
++            else if (regname[5] == '9')
++	      regno = 77;
++	    else
++	      return;
++	  } /* if (regname[4] == '6') */
++          else if (regname[4] == '7') {
++            if (regname[5] == '2' )
++	      regno = 78;
++            else if (regname[5] == '3')
++	      regno = 79;
++            else if (regname[5] == '4')
++	      regno = 80;
++            else if (regname[5] == '5')
++	      regno = 81;
++	    else
++	      return;
++	  }  /* if (regname[4] == '7') */
++          else if (regname[4] == '8') {
++            if (regname[5] == '4' )
++	      regno = 82;
++            else if (regname[5] == '5')
++	      regno = 83;
++            else if (regname[5] == '7')
++	      regno = 84;
++	    else
++	      return;
++	    } /* if (regname[4] == '8') */
++	  else
++	    return;  /* (regname[4] != '6') && (regname[4] != '7') && (regname[4] != '8')  */
++          }
++        else
++          return; /* regname[3] != '2' */
++        }
++      else
++        return; /* (regnamelen != 4) && (regnamelen != 5) && (regnamelen != 6) */
++      break; /* case 'S' */
++      
++    default:
++      return;
++    }
++
++  terminated_val = (char *) xmalloc(vallen + 1);
++  strncpy (terminated_val, val, vallen);
++  monitor_supply_register (regno, terminated_val);
++  free(terminated_val);
++}
++
++/*
++ * This array of registers needs to match the indexes used by GDB. The
++ * whole reason this exists is because the various ROM monitors use
++ * different names than GDB does, and don't support all the
++ * registers either. So, typing "info reg sp" becomes an "r1".
++ */
++
++static char *eppcbug_regnames[] =
++{
++  "r0",   "r1",   "r2",   "r3",   "r4",   "r5",   "r6",   "r7",
++  "r8",   "r9",   "r10",  "r11",  "r12",  "r13",  "r14",  "r15",
++  "r16",  "r17",  "r18",  "r19",  "r20",  "r21",  "r22",  "r23",
++  "r24",  "r25",  "r26",  "r27",  "r28",  "r29",  "r30",  "r31",
++
++  "fr0",  "fr1",  "fr2",  "fr3",  "fr4",  "fr5",  "fr6",  "fr7",
++  "fr8",  "fr9",  "fr10", "fr11", "fr12", "fr13", "fr14", "fr15",
++  "fr16", "fr17", "fr18", "fr19", "fr20", "fr21", "fr22", "fr23",
++  "fr24", "fr25", "fr26", "fr27", "fr28", "fr29", "fr30", "fr31",
++
++/* pc      ps      cnd     lr      cnt     xer     mq */
++  "ip",   "msr",  "cr",   "spr8", "spr9", "spr1", "spr0",
++
++/* NOT SURE ABOUT THE GDB INDICES FOR THESE! */
++  "spr18",  "spr19",  "spr22",  "spr26",  "spr27", "spr268", "spr269", "spr272",  
++  "spr273", "spr274", "spr275", "spr284", "spr285", "spr287"
++};
++
++/*
++ * Define the monitor command strings. Since these are passed directly
++ * through to a printf style function, we need can include formatting
++ * strings. We also need a CR or LF on the end.
++ */
++
++static struct target_ops eppcbug_ops0;
++static struct target_ops eppcbug_ops1;
++
++static char *eppcbug_inits[] = {"\r", NULL};
++
++static void
++init_eppc_cmds (char  * LOAD_CMD,
++	       struct monitor_ops * OPS,
++	       struct target_ops * targops)
++{
++  OPS->flags = MO_CLR_BREAK_USES_ADDR | MO_HANDLE_NL;	
++  OPS->init = eppcbug_inits;		/* Init strings */
++  OPS->cont = "g\r";			/* continue command */		
++  OPS->step = "t\r";			/* single step */		
++  OPS->stop = NULL;			/* interrupt command */	
++  OPS->set_break = "br %x\r";		/* set a breakpoint */	
++  OPS->clr_break = "nobr %x\r";		/* clear a breakpoint */
++  OPS->clr_all_break = "nobr\r";	/* clear all breakpoints */
++  OPS->fill = "bf %x:%x %x;b\r";	/* fill (start count val) */		
++  OPS->setmem.cmdb = "ms %x %02x\r";	/* setmem.cmdb (addr, value) */		
++  OPS->setmem.cmdw = "ms %x %04x\r";	/* setmem.cmdw (addr, value) */		
++  OPS->setmem.cmdl = "ms %x %08x\r";	/* setmem.cmdl (addr, value) */		
++  OPS->setmem.cmdll = NULL;		/* setmem.cmdll (addr, value) */	
++  OPS->setmem.resp_delim = NULL;	/* setreg.resp_delim */		
++  OPS->setmem.term = NULL;		/* setreg.term */			
++  OPS->setmem.term_cmd = NULL;		/* setreg.term_cmd */		
++  OPS->getmem.cmdb = "md %x:%x;b\r";	/* getmem.cmdb (addr, len) */		
++  OPS->getmem.cmdw = "md %x:%x;b\r";	/* getmem.cmdw (addr, len) */		
++  OPS->getmem.cmdl = "md %x:%x;b\r";	/* getmem.cmdl (addr, len) */		
++  OPS->getmem.cmdll = NULL;		/* getmem.cmdll (addr, len) */		
++  OPS->getmem.resp_delim = " ";		/* getmem.resp_delim */		
++  OPS->getmem.term = NULL;		/* getmem.term */			
++  OPS->getmem.term_cmd = NULL;		/* getmem.term_cmd */		
++  OPS->setreg.cmd = "rs %s %x\r";	/* setreg.cmd (name, value) */		
++  OPS->setreg.resp_delim = NULL;	/* setreg.resp_delim */		
++  OPS->setreg.term = NULL;		/* setreg.term */			
++  OPS->setreg.term_cmd = NULL	;	/* setreg.term_cmd */			
++  OPS->getreg.cmd = "rs %s\r";		/* getreg.cmd (name) */		
++  OPS->getreg.resp_delim = "=";		/* getreg.resp_delim */		
++  OPS->getreg.term = NULL;		/* getreg.term */			
++  OPS->getreg.term_cmd = NULL	;	/* getreg.term_cmd */			
++  OPS->register_pattern = "\\(\\w+\\) +=\\([0-9a-fA-F]+\\b\\)"; /* register_pattern */	
++  OPS->supply_register = eppcbug_supply_register;	/* supply_register */		
++  OPS->dump_registers = "rd\r";		/* dump all registers */
++  OPS->load_routine = NULL;		/* load_routine (defaults to SRECs) */	
++  OPS->load = LOAD_CMD;			/* download command */		        	
++  OPS->loadresp = NULL;			/* load response */			
++  OPS->prompt = "EPPC-Bug>";		/* monitor command prompt */		
++  OPS->line_term = "\r";		/* end-of-line terminator */	
++  OPS->cmd_end = NULL;			/* optional command terminator */	
++  OPS->target = targops ;		/* target operations */			
++  OPS->stopbits = SERIAL_1_STOPBITS;	/* number of stop bits */		
++  OPS->regnames = eppcbug_regnames;	/* registers names */			
++  OPS->magic = MONITOR_OPS_MAGIC;	/* magic */				
++}
++
++
++static struct monitor_ops eppcbug_cmds0 ;
++static struct monitor_ops eppcbug_cmds1 ;
++
++static void
++eppcbug_open0(args, from_tty)
++     char *args;
++     int from_tty;
++{
++  monitor_open (args, &eppcbug_cmds0, from_tty);
++}
++
++static void
++eppcbug_open1(args, from_tty)
++     char *args;
++     int from_tty;
++{
++  monitor_open (args, &eppcbug_cmds1, from_tty);
++}
++
++void
++_initialize_eppcbug_rom ()
++{
++  init_eppc_cmds("lo 0\r", &eppcbug_cmds0, &eppcbug_ops0) ;
++  init_eppc_cmds("lo 1\r", &eppcbug_cmds1, &eppcbug_ops1);
++  init_monitor_ops (&eppcbug_ops0);
++
++  eppcbug_ops0.to_shortname = "eppcbug";
++  eppcbug_ops0.to_longname = "PowerPC EPPCBug monitor on port 0";
++  eppcbug_ops0.to_doc = "Debug via the PowerPC EPPCBug monitor using port 0.\n\
++Specify the serial device it is connected to (e.g. /dev/ttya).";
++  eppcbug_ops0.to_open = eppcbug_open0;
++
++  add_target (&eppcbug_ops0);
++
++  init_monitor_ops (&eppcbug_ops1);
++
++  eppcbug_ops1.to_shortname = "eppcbug1";
++  eppcbug_ops1.to_longname = "PowerPC EPPCBug monitor on port 1";
++  eppcbug_ops1.to_doc = "Debug via the PowerPC EPPCBug monitor using port 1.\n\
++Specify the serial device it is connected to (e.g. /dev/ttya).";
++  eppcbug_ops1.to_open = eppcbug_open1;
++
++  add_target (&eppcbug_ops1);
++}
