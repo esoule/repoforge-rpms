@@ -241,3 +241,7 @@ This is the GNU binutils for RTEMS targetting %{binutils_target}.
 
 %dir %{_prefix}/%{binutils_target}/lib
 %{_prefix}/%{binutils_target}/lib/ldscripts
+
+%changelog
+* Wed Jan 21 2004 RTEMS Project - 2.13.2.1-2
+- Original Package, as provided by RTEMS

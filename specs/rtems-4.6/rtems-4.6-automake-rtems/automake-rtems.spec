@@ -90,3 +90,7 @@ fi
 %doc %{_mandir}/man?/*
 %{_datadir}/aclocal-%{amvers}
 %{_datadir}/automake-%{amvers}
+
+%changelog
+* Wed Jan 21 2004 RTEMS Project - 1.7.2-2
+- Original Package, as provided by RTEMS

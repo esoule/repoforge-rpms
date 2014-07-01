@@ -95,3 +95,7 @@ fi
 %{_mandir}/man?/*
 %{_datadir}/autoconf
 %exclude %{_datadir}/emacs/site-lisp
+
+%changelog
+* Wed Oct 13 2004 RTEMS Project - 2.59-0
+- Original Package, as provided by RTEMS

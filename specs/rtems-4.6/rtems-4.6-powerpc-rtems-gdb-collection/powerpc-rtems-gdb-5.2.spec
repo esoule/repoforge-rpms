@@ -232,3 +232,7 @@ This is the GNU gdb for RTEMS targetting %{gdb_target}.
 %if "%{gdb_target}" == "sparc-rtems"
 %{_prefix}/bin/%{gdb_target}-sis%{_exeext}
 %endif
+
+%changelog
+* Fri Sep 5 2003 RTEMS Project - 5.2-1
+- Original Package, as provided by RTEMS

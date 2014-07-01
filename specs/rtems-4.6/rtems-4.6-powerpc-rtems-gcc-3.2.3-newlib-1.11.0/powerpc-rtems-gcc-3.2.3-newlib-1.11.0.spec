@@ -692,3 +692,7 @@ This is the gcc/gnat compiler for %{gcc_target}
 %{_prefix}/lib/gcc-lib/%{gcc_target}/%{gcc_version}/adalib
 %{_prefix}/lib/gcc-lib/%{gcc_target}/%{gcc_version}/adainclude
 %endif
+
+%changelog
+* Tue Apr 20 2004 RTEMS Project - gcc3.2.3newlib1.11.0-4
+- Original Package, as provided by RTEMS
