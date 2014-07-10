@@ -204,3 +204,6 @@ fi
 %{_datadir}/aclocal-%{amvers}
 %{_datadir}/automake-%{amvers}
 
+%changelog
+* Tue Mar 19 2013 RTEMS Project - 1.11.1-4
+- Original Package, as provided by RTEMS Project for RTEMS 4.10

@@ -909,3 +909,6 @@ if [ $1 -eq 0 ]; then
   /sbin/install-info --delete --info-dir=%{_infodir} %{_infodir}/libm.info.gz || :
 fi
 
+%changelog
+* Wed Nov 20 2013 RTEMS Project - 4.4.7-6
+- Original Package, as provided by RTEMS Project for RTEMS 4.10

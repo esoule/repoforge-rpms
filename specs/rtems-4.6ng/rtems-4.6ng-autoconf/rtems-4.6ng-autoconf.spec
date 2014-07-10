@@ -215,3 +215,7 @@ fi
 %dir %{_datadir}
 %{_datadir}/autoconf
 %exclude %{_datadir}/emacs/site-lisp
+
+%changelog
+* Tue Mar 19 2013 RTEMS Project - 2.68-4
+- Original Package, as provided by RTEMS Project for RTEMS 4.10
