@@ -3,7 +3,7 @@
 # 	http://www.rtems.org/bugzilla
 #
 
-%define _prefix                 /opt/rtems-4.10
+%define _prefix                 /opt/rtems-4.6ng
 %define _exec_prefix            %{_prefix}
 %define _bindir                 %{_exec_prefix}/bin
 %define _sbindir                %{_exec_prefix}/sbin
@@ -15,8 +15,8 @@
 %define _localstatedir          %{_prefix}/var
 %define _includedir             %{_prefix}/include
 %define _libdir                 %{_exec_prefix}/%{_lib}
-%define _mandir                 %{_datarootdir}/man
-%define _infodir                %{_datarootdir}/info
+%define _mandir                 %{_prefix}/man
+%define _infodir                %{_prefix}/info
 %define _localedir              %{_datarootdir}/locale
 
 %ifos cygwin cygwin32 mingw mingw32
@@ -51,15 +51,16 @@
 %define gcc_version 4.4.7
 %define gcc_rpmvers %{expand:%(echo "4.4.7" | tr - _ )}
 
-%define newlib_pkgvers		1.18.0
-%define newlib_version		1.18.0
+%define newlib_pkgvers		1.11.0
+%define newlib_version		1.11.0
+%define newlib_release		34.0.3
 
-Name:         	rtems-4.10-powerpc-rtems4.10-gcc
-Summary:      	powerpc-rtems4.10 gcc
+Name:         	rtems-4.6ng-powerpc-rtems-gcc
+Summary:      	powerpc-rtems gcc
 
 Group:	      	Development/Tools
 Version:        %{gcc_rpmvers}
-Release:      	6%{?dist}
+Release:      	6.0.3%{?dist}
 License:      	GPL
 URL:		http://gcc.gnu.org
 %{?el5:BuildRoot:	%{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)}
@@ -253,9 +254,9 @@ BuildRequires:  %{_host_rpmprefix}mpfr-devel >= %{mpfr_required}
 %endif
 
 %if "%{_build}" != "%{_host}"
-BuildRequires:  rtems-4.10-powerpc-rtems4.10-gcc = %{gcc_rpmvers}
+BuildRequires:  rtems-4.6ng-powerpc-rtems-gcc = %{gcc_rpmvers}
 %if "%{gcc_version}" >= "4.8.0"
-BuildRequires:  rtems-4.10-powerpc-rtems4.10-gcc-c++ = %{gcc_rpmvers}
+BuildRequires:  rtems-4.6ng-powerpc-rtems-gcc-c++ = %{gcc_rpmvers}
 %endif
 %endif
 
@@ -264,12 +265,12 @@ BuildRequires:  rtems-4.10-powerpc-rtems4.10-gcc-c++ = %{gcc_rpmvers}
 BuildRequires:	flex bison
 
 BuildRequires:	%{?suse:makeinfo}%{!?suse:texinfo} >= 4.2
-BuildRequires:	rtems-4.10-powerpc-rtems4.10-binutils
+BuildRequires:	rtems-4.6ng-powerpc-rtems-binutils
 
-Requires:	rtems-4.10-gcc-common
-Requires:	rtems-4.10-powerpc-rtems4.10-binutils
-Requires:	rtems-4.10-powerpc-rtems4.10-gcc-libgcc = %{gcc_rpmvers}-%{release}
-Requires:	rtems-4.10-powerpc-rtems4.10-newlib = %{newlib_version}-34%{?dist}
+Requires:	rtems-4.6ng-gcc-common
+Requires:	rtems-4.6ng-powerpc-rtems-binutils
+Requires:	rtems-4.6ng-powerpc-rtems-gcc-libgcc = %{gcc_rpmvers}-%{release}
+Requires:	rtems-4.6ng-powerpc-rtems-newlib = %{newlib_version}-%{newlib_release}%{?dist}
 
 %if "%{gcc_version}" >= "4.5.0"
 BuildRequires:  zlib-devel
@@ -287,9 +288,10 @@ Source0:	ftp://ftp.rtems.org/pub/rtems/SOURCES/4.11/gcc-4.4.7.tar.%{?el5:bz2}%{!
 Patch0:		ftp://ftp.rtems.org/pub/rtems/SOURCES/4.10/gcc-4.4.7-rtems4.10-20130320.diff
 %endif
 
-%if "%{newlib_version}" == "1.18.0"
+%if "%{newlib_version}" == "1.11.0"
 Source50:	ftp://sourceware.org/pub/newlib/newlib-%{newlib_pkgvers}.tar.gz
-Patch50:	ftp://ftp.rtems.org/pub/rtems/SOURCES/4.10/newlib-1.18.0-rtems4.10-20130320.diff
+Patch50:	newlib-1.11.0-rtems-20030605.diff
+Patch51:	newlib-1.11.0-iswctype-label-at-end.patch
 %endif
 
 %if 0%{?_build_mpfr}
@@ -309,7 +311,7 @@ Source63:    http://www.mr511.de/software/libelf-%{libelf_version}.tar.gz
 %endif
 
 %description
-Cross gcc for powerpc-rtems4.10.
+Cross gcc for powerpc-rtems.
 
 %prep
 %setup -c -T -n %{name}-%{version}
@@ -335,6 +337,7 @@ sed -i -e '/thread_file=.*rtems/,/use_gcc_stdint=wrap/ { s/use_gcc_stdint=wrap/u
 %setup -q -T -D -n %{name}-%{version} -a50
 cd newlib-%{newlib_version}
 %{?PATCH50:%patch50 -p1}
+%{?PATCH51:%patch51 -p1}
 cd ..
   # Copy the C library into gcc's source tree
   ln -s ../newlib-%{newlib_version}/newlib gcc-%{gcc_pkgvers}
@@ -373,7 +376,7 @@ cd ..
   ln -s ../libelf-%{libelf_version} gcc-%{gcc_pkgvers}/libelf
 %endif
 
-echo "RTEMS gcc-%{gcc_version}-6%{?dist}/newlib-%{newlib_version}-34%{?dist}" > gcc-%{gcc_pkgvers}/gcc/DEV-PHASE
+echo "RTEMS gcc-%{gcc_version}-6%{?dist}/newlib-%{newlib_version}-%{newlib_release}%{?dist}" > gcc-%{gcc_pkgvers}/gcc/DEV-PHASE
 
 
   # Fix timestamps
@@ -406,7 +409,7 @@ echo "RTEMS gcc-%{gcc_version}-6%{?dist}/newlib-%{newlib_version}-34%{?dist}" > 
     --infodir=%{_infodir} \
     --datadir=%{_datadir} \
     --build=%_build --host=%_host \
-    --target=powerpc-rtems4.10 \
+    --target=powerpc-rtems \
     --disable-libstdcxx-pch \
     --with-gnu-as --with-gnu-ld --verbose \
     --with-newlib \
@@ -442,7 +445,7 @@ echo "RTEMS gcc-%{gcc_version}-6%{?dist}/newlib-%{newlib_version}-34%{?dist}" > 
   make DESTDIR=$RPM_BUILD_ROOT install
   cd ..
 
-  cd build/powerpc-rtems4.10/newlib
+  cd build/powerpc-rtems/newlib
   make DESTDIR=$RPM_BUILD_ROOT install-info
   cd ../../..
 
@@ -450,7 +453,7 @@ echo "RTEMS gcc-%{gcc_version}-6%{?dist}/newlib-%{newlib_version}-34%{?dist}" > 
 # Misplaced header file
   if test -f $RPM_BUILD_ROOT%{_includedir}/mf-runtime.h; then
     mv $RPM_BUILD_ROOT%{_includedir}/mf-runtime.h \
-      $RPM_BUILD_ROOT%{_gcclibdir}/gcc/powerpc-rtems4.10/%{gcc_version}/include/
+      $RPM_BUILD_ROOT%{_gcclibdir}/gcc/powerpc-rtems/%{gcc_version}/include/
   fi
 %endif
 
@@ -465,7 +468,7 @@ echo "RTEMS gcc-%{gcc_version}-6%{?dist}/newlib-%{newlib_version}-34%{?dist}" > 
 %endif
 
   # We use the version from binutils
-  rm -f $RPM_BUILD_ROOT%{_bindir}/powerpc-rtems4.10-c++filt%{_exeext}
+  rm -f $RPM_BUILD_ROOT%{_bindir}/powerpc-rtems-c++filt%{_exeext}
 
 
   # We don't ship info/dir
@@ -476,16 +479,16 @@ echo "RTEMS gcc-%{gcc_version}-6%{?dist}/newlib-%{newlib_version}-34%{?dist}" > 
   rm -f $RPM_BUILD_ROOT%{_mandir}/man3/*ffi*
 
   # Bug in gcc-3.4.0pre
-  rm -f $RPM_BUILD_ROOT%{_bindir}/powerpc-rtems4.10-powerpc-rtems4.10-gcjh%{_exeext}
+  rm -f $RPM_BUILD_ROOT%{_bindir}/powerpc-rtems-powerpc-rtems-gcjh%{_exeext}
 
   # Bug in gcc-3.3.x/gcc-3.4.x: Despite we don't need fixincludes, it installs
   # the fixinclude-install-tools
-  rm -rf ${RPM_BUILD_ROOT}%{_gcclibdir}/gcc/powerpc-rtems4.10/%{gcc_version}/install-tools
-  rm -rf ${RPM_BUILD_ROOT}%{_libexecdir}/gcc/powerpc-rtems4.10/%{gcc_version}/install-tools
+  rm -rf ${RPM_BUILD_ROOT}%{_gcclibdir}/gcc/powerpc-rtems/%{gcc_version}/install-tools
+  rm -rf ${RPM_BUILD_ROOT}%{_libexecdir}/gcc/powerpc-rtems/%{gcc_version}/install-tools
 
   # Bug in gcc > 4.1.0: Installs an unused, empty directory
-  if test -d ${RPM_BUILD_ROOT}%{_prefix}/powerpc-rtems4.10/include/bits; then
-    rmdir ${RPM_BUILD_ROOT}%{_prefix}/powerpc-rtems4.10/include/bits
+  if test -d ${RPM_BUILD_ROOT}%{_prefix}/powerpc-rtems/include/bits; then
+    rmdir ${RPM_BUILD_ROOT}%{_prefix}/powerpc-rtems/include/bits
   fi
 
 %if %{with iconv}
@@ -506,7 +509,7 @@ echo "RTEMS gcc-%{gcc_version}-6%{?dist}/newlib-%{newlib_version}-34%{?dist}" > 
   multilibs=`build/gcc/xgcc -Bbuild/gcc/ --print-multi-lib | sed -e 's,;.*$,,'`
 
   echo "%defattr(-,root,root,-)" > build/files.newlib
-  TGTDIR="%{_exec_prefix}/powerpc-rtems4.10/lib"
+  TGTDIR="%{_exec_prefix}/powerpc-rtems/lib"
   for i in $multilibs; do
     case $i in
     \.) echo "%dir ${TGTDIR}" >> build/files.newlib
@@ -518,7 +521,7 @@ echo "RTEMS gcc-%{gcc_version}-6%{?dist}/newlib-%{newlib_version}-34%{?dist}" > 
 
   rm -f dirs ;
   echo "%defattr(-,root,root,-)" >> dirs
-  TGTDIR="%{_gcclibdir}/gcc/powerpc-rtems4.10/%{gcc_version}"
+  TGTDIR="%{_gcclibdir}/gcc/powerpc-rtems/%{gcc_version}"
   for i in $multilibs; do
     case $i in
     \.) ;; # ignore, handled elsewhere
@@ -534,7 +537,7 @@ echo "RTEMS gcc-%{gcc_version}-6%{?dist}/newlib-%{newlib_version}-34%{?dist}" > 
   cp dirs build/files.gcj
   cp dirs build/files.g++
 
-  TGTDIR="%{_gcclibdir}/gcc/powerpc-rtems4.10/%{gcc_version}"
+  TGTDIR="%{_gcclibdir}/gcc/powerpc-rtems/%{gcc_version}"
   f=`find ${RPM_BUILD_ROOT}${TGTDIR} ! -type d -print | sed -e "s,^$RPM_BUILD_ROOT,,g"`;
   for i in $f; do
     case $i in
@@ -565,7 +568,7 @@ echo "RTEMS gcc-%{gcc_version}-6%{?dist}/newlib-%{newlib_version}-34%{?dist}" > 
     esac
   done
 
-  TGTDIR="%{_exec_prefix}/powerpc-rtems4.10/lib"
+  TGTDIR="%{_exec_prefix}/powerpc-rtems/lib"
   f=`find ${RPM_BUILD_ROOT}${TGTDIR} ! -type d -print | sed -e "s,^$RPM_BUILD_ROOT,,g"`;
   for i in $f; do
     case $i in
@@ -606,16 +609,16 @@ sed -e 's,^\s*/usr/lib/rpm.*/brp-strip,./brp-strip,' \
 
 cat << EOF > %{_builddir}/%{name}-%{gcc_rpmvers}/find-provides
 #!/bin/sh
-grep -E -v '^${RPM_BUILD_ROOT}%{_exec_prefix}/powerpc-rtems4.10/(lib|include|sys-root)' \
-  %{?_gcclibdir:| grep -v '^${RPM_BUILD_ROOT}%{_gcclibdir}/gcc/powerpc-rtems4.10/'} | %__find_provides
+grep -E -v '^${RPM_BUILD_ROOT}%{_exec_prefix}/powerpc-rtems/(lib|include|sys-root)' \
+  %{?_gcclibdir:| grep -v '^${RPM_BUILD_ROOT}%{_gcclibdir}/gcc/powerpc-rtems/'} | %__find_provides
 EOF
 chmod +x %{_builddir}/%{name}-%{gcc_rpmvers}/find-provides
 %define __find_provides %{_builddir}/%{name}-%{gcc_rpmvers}/find-provides
 
 cat << EOF > %{_builddir}/%{name}-%{gcc_rpmvers}/find-requires
 #!/bin/sh
-grep -E -v '^${RPM_BUILD_ROOT}%{_exec_prefix}/powerpc-rtems4.10/(lib|include|sys-root)' \
-  %{?_gcclibdir:| grep -v '^${RPM_BUILD_ROOT}%{_gcclibdir}/gcc/powerpc-rtems4.10/'} | %__find_requires
+grep -E -v '^${RPM_BUILD_ROOT}%{_exec_prefix}/powerpc-rtems/(lib|include|sys-root)' \
+  %{?_gcclibdir:| grep -v '^${RPM_BUILD_ROOT}%{_gcclibdir}/gcc/powerpc-rtems/'} | %__find_requires
 EOF
 chmod +x %{_builddir}/%{name}-%{gcc_rpmvers}/find-requires
 %define __find_requires %{_builddir}/%{name}-%{gcc_rpmvers}/find-requires
@@ -648,95 +651,95 @@ sed -e 's,^[ ]*/usr/lib/rpm/find-debuginfo.sh,./find-debuginfo.sh,' \
   rm -rf $RPM_BUILD_ROOT
 
 # ==============================================================
-# rtems-4.10-powerpc-rtems4.10-gcc
+# rtems-4.6ng-powerpc-rtems-gcc
 # ==============================================================
-# %package -n rtems-4.10-powerpc-rtems4.10-gcc
-# Summary:        GNU cc compiler for powerpc-rtems4.10
+# %package -n rtems-4.6ng-powerpc-rtems-gcc
+# Summary:        GNU cc compiler for powerpc-rtems
 # Group:          Development/Tools
 # Version:        %{gcc_rpmvers}
-# Requires:       rtems-4.10-powerpc-rtems4.10-binutils
-# Requires:       rtems-4.10-powerpc-rtems4.10-newlib = %{newlib_version}-34%{?dist}
+# Requires:       rtems-4.6ng-powerpc-rtems-binutils
+# Requires:       rtems-4.6ng-powerpc-rtems-newlib = %{newlib_version}-%{newlib_release}%{?dist}
 # License:	GPL
 
 # %if %build_infos
-# Requires:      rtems-4.10-gcc-common
+# Requires:      rtems-4.6ng-gcc-common
 # %endif
 
-%description -n rtems-4.10-powerpc-rtems4.10-gcc
-GNU cc compiler for powerpc-rtems4.10.
+%description -n rtems-4.6ng-powerpc-rtems-gcc
+GNU cc compiler for powerpc-rtems.
 
 # ==============================================================
-# rtems-4.10-powerpc-rtems4.10-gcc-libgcc
+# rtems-4.6ng-powerpc-rtems-gcc-libgcc
 # ==============================================================
-%package -n rtems-4.10-powerpc-rtems4.10-gcc-libgcc
-Summary:        libgcc for powerpc-rtems4.10-gcc
+%package -n rtems-4.6ng-powerpc-rtems-gcc-libgcc
+Summary:        libgcc for powerpc-rtems-gcc
 Group:          Development/Tools
 Version:        %{gcc_rpmvers}
 %{?_with_noarch_subpackages:BuildArch: noarch}
-Requires:       rtems-4.10-powerpc-rtems4.10-newlib = %{newlib_version}-34%{?dist}
+Requires:       rtems-4.6ng-powerpc-rtems-newlib = %{newlib_version}-%{newlib_release}%{?dist}
 License:	GPL
 
-%description -n rtems-4.10-powerpc-rtems4.10-gcc-libgcc
-libgcc powerpc-rtems4.10-gcc.
+%description -n rtems-4.6ng-powerpc-rtems-gcc-libgcc
+libgcc powerpc-rtems-gcc.
 
 
-%files -n rtems-4.10-powerpc-rtems4.10-gcc
+%files -n rtems-4.6ng-powerpc-rtems-gcc
 %defattr(-,root,root)
 %dir %{_prefix}
 
 %dir %{_mandir}
 %dir %{_mandir}/man1
-%{_mandir}/man1/powerpc-rtems4.10-gcc.1*
-%{_mandir}/man1/powerpc-rtems4.10-cpp.1*
-%{_mandir}/man1/powerpc-rtems4.10-gcov.1*
+%{_mandir}/man1/powerpc-rtems-gcc.1*
+%{_mandir}/man1/powerpc-rtems-cpp.1*
+%{_mandir}/man1/powerpc-rtems-gcov.1*
 
 %dir %{_bindir}
-%{_bindir}/powerpc-rtems4.10-cpp%{_exeext}
-%{_bindir}/powerpc-rtems4.10-gcc%{_exeext}
-%{_bindir}/powerpc-rtems4.10-gcc-%{gcc_version}%{_exeext}
-%{_bindir}/powerpc-rtems4.10-gcov%{_exeext}
+%{_bindir}/powerpc-rtems-cpp%{_exeext}
+%{_bindir}/powerpc-rtems-gcc%{_exeext}
+%{_bindir}/powerpc-rtems-gcc-%{gcc_version}%{_exeext}
+%{_bindir}/powerpc-rtems-gcov%{_exeext}
 %if "%{gcc_version}" < "4.6.0"
-%{_bindir}/powerpc-rtems4.10-gccbug
+%{_bindir}/powerpc-rtems-gccbug
 %endif
 %if "%{gcc_version}" >= "4.7.0"
 # FIXME: To ship or not to ship?
-%{_bindir}/powerpc-rtems4.10-gcc-ar%{_exeext}
-%{_bindir}/powerpc-rtems4.10-gcc-nm%{_exeext}
-%{_bindir}/powerpc-rtems4.10-gcc-ranlib%{_exeext}
+%{_bindir}/powerpc-rtems-gcc-ar%{_exeext}
+%{_bindir}/powerpc-rtems-gcc-nm%{_exeext}
+%{_bindir}/powerpc-rtems-gcc-ranlib%{_exeext}
 %endif
 
 %dir %{_libexecdir}
 %dir %{_libexecdir}/gcc
-%dir %{_libexecdir}/gcc/powerpc-rtems4.10
-%dir %{_libexecdir}/gcc/powerpc-rtems4.10/%{gcc_version}
-%{_libexecdir}/gcc/powerpc-rtems4.10/%{gcc_version}/cc1%{_exeext}
-%{_libexecdir}/gcc/powerpc-rtems4.10/%{gcc_version}/collect2%{_exeext}
+%dir %{_libexecdir}/gcc/powerpc-rtems
+%dir %{_libexecdir}/gcc/powerpc-rtems/%{gcc_version}
+%{_libexecdir}/gcc/powerpc-rtems/%{gcc_version}/cc1%{_exeext}
+%{_libexecdir}/gcc/powerpc-rtems/%{gcc_version}/collect2%{_exeext}
 %if "%{gcc_version}" >= "4.5.0"
-%{?with_lto:%{_libexecdir}/gcc/powerpc-rtems4.10/%{gcc_version}/lto%{_exeext}}
-%{_libexecdir}/gcc/powerpc-rtems4.10/%{gcc_version}/lto-wrapper%{_exeext}
+%{?with_lto:%{_libexecdir}/gcc/powerpc-rtems/%{gcc_version}/lto%{_exeext}}
+%{_libexecdir}/gcc/powerpc-rtems/%{gcc_version}/lto-wrapper%{_exeext}
 %endif
 
-%files -n rtems-4.10-powerpc-rtems4.10-gcc-libgcc -f build/files.gcc
+%files -n rtems-4.6ng-powerpc-rtems-gcc-libgcc -f build/files.gcc
 %defattr(-,root,root)
 %dir %{_prefix}
 %dir %{_gcclibdir}
 %dir %{_gcclibdir}/gcc
-%dir %{_gcclibdir}/gcc/powerpc-rtems4.10
-%dir %{_gcclibdir}/gcc/powerpc-rtems4.10/%{gcc_version}
-%dir %{_gcclibdir}/gcc/powerpc-rtems4.10/%{gcc_version}/include
+%dir %{_gcclibdir}/gcc/powerpc-rtems
+%dir %{_gcclibdir}/gcc/powerpc-rtems/%{gcc_version}
+%dir %{_gcclibdir}/gcc/powerpc-rtems/%{gcc_version}/include
 
 %if "%{gcc_version}" > "4.0.3"
-%dir %{_gcclibdir}/gcc/powerpc-rtems4.10/%{gcc_version}/include/ssp
+%dir %{_gcclibdir}/gcc/powerpc-rtems/%{gcc_version}/include/ssp
 %endif
 
 %if "%{gcc_version}" >= "4.3.0"
-%{_gcclibdir}/gcc/powerpc-rtems4.10/%{gcc_version}/include-fixed
+%{_gcclibdir}/gcc/powerpc-rtems/%{gcc_version}/include-fixed
 %endif
 
 # ==============================================================
-# rtems-4.10-gcc-common
+# rtems-4.6ng-gcc-common
 # ==============================================================
-%package -n rtems-4.10-gcc-common
+%package -n rtems-4.6ng-gcc-common
 Summary:	Base package for rtems gcc and newlib C Library
 Group:          Development/Tools
 Version:        %{gcc_rpmvers}
@@ -746,10 +749,10 @@ License:	GPL
 Requires(post): 	/sbin/install-info
 Requires(preun):	/sbin/install-info
 
-%description -n rtems-4.10-gcc-common
+%description -n rtems-4.6ng-gcc-common
 GCC files that are shared by all targets.
 
-%files -n rtems-4.10-gcc-common
+%files -n rtems-4.6ng-gcc-common
 %defattr(-,root,root)
 %dir %{_prefix}
 %dir %{_prefix}/share
@@ -771,14 +774,14 @@ GCC files that are shared by all targets.
 %{_mandir}/man7/gfdl.7*
 %{_mandir}/man7/gpl.7*
 
-%post -n rtems-4.10-gcc-common
+%post -n rtems-4.6ng-gcc-common
   /sbin/install-info --info-dir=%{_infodir} %{_infodir}/cpp.info.gz || :
   /sbin/install-info --info-dir=%{_infodir} %{_infodir}/cppinternals.info.gz || :
   /sbin/install-info --info-dir=%{_infodir} %{_infodir}/gcc.info.gz || :
   /sbin/install-info --info-dir=%{_infodir} %{_infodir}/gccint.info.gz || :
   /sbin/install-info --info-dir=%{_infodir} %{_infodir}/gccinstall.info.gz || :
 
-%preun -n rtems-4.10-gcc-common
+%preun -n rtems-4.6ng-gcc-common
 if [ $1 -eq 0 ]; then
   /sbin/install-info --delete --info-dir=%{_infodir} %{_infodir}/cpp.info.gz || :
   /sbin/install-info --delete --info-dir=%{_infodir} %{_infodir}/cppinternals.info.gz || :
@@ -788,108 +791,108 @@ if [ $1 -eq 0 ]; then
 fi
 
 # ==============================================================
-# rtems-4.10-powerpc-rtems4.10-gcc-c++
+# rtems-4.6ng-powerpc-rtems-gcc-c++
 # ==============================================================
-%package -n rtems-4.10-powerpc-rtems4.10-gcc-c++
-Summary:	GCC c++ compiler for powerpc-rtems4.10
+%package -n rtems-4.6ng-powerpc-rtems-gcc-c++
+Summary:	GCC c++ compiler for powerpc-rtems
 Group:		Development/Tools
 Version:        %{gcc_rpmvers}
 License:	GPL
-Requires:       rtems-4.10-powerpc-rtems4.10-gcc-libstdc++ = %{gcc_rpmvers}-%{release}
+Requires:       rtems-4.6ng-powerpc-rtems-gcc-libstdc++ = %{gcc_rpmvers}-%{release}
 
 %if "%{_build}" != "%{_host}"
-BuildRequires:  rtems-4.10-powerpc-rtems4.10-gcc-c++ = %{gcc_rpmvers}
+BuildRequires:  rtems-4.6ng-powerpc-rtems-gcc-c++ = %{gcc_rpmvers}
 %endif
 
-Requires:       rtems-4.10-gcc-common
-Requires:       rtems-4.10-powerpc-rtems4.10-gcc = %{gcc_rpmvers}-%{release}
+Requires:       rtems-4.6ng-gcc-common
+Requires:       rtems-4.6ng-powerpc-rtems-gcc = %{gcc_rpmvers}-%{release}
 
-%description -n rtems-4.10-powerpc-rtems4.10-gcc-c++
-GCC c++ compiler for powerpc-rtems4.10.
+%description -n rtems-4.6ng-powerpc-rtems-gcc-c++
+GCC c++ compiler for powerpc-rtems.
 
 
-%package -n rtems-4.10-powerpc-rtems4.10-gcc-libstdc++
-Summary:	libstdc++ for powerpc-rtems4.10
+%package -n rtems-4.6ng-powerpc-rtems-gcc-libstdc++
+Summary:	libstdc++ for powerpc-rtems
 Group:		Development/Tools
 Version:        %{gcc_rpmvers}
 %{?_with_noarch_subpackages:BuildArch: noarch}
 License:	GPL
 
-%description -n rtems-4.10-powerpc-rtems4.10-gcc-libstdc++
+%description -n rtems-4.6ng-powerpc-rtems-gcc-libstdc++
 %{summary}
 
 
-%files -n rtems-4.10-powerpc-rtems4.10-gcc-c++
+%files -n rtems-4.6ng-powerpc-rtems-gcc-c++
 %defattr(-,root,root)
 %dir %{_prefix}
 
 %dir %{_mandir}
 %dir %{_mandir}/man1
-%{_mandir}/man1/powerpc-rtems4.10-g++.1*
+%{_mandir}/man1/powerpc-rtems-g++.1*
 
 %dir %{_bindir}
-%{_bindir}/powerpc-rtems4.10-c++%{_exeext}
-%{_bindir}/powerpc-rtems4.10-g++%{_exeext}
+%{_bindir}/powerpc-rtems-c++%{_exeext}
+%{_bindir}/powerpc-rtems-g++%{_exeext}
 
 %dir %{_libexecdir}
 %dir %{_libexecdir}/gcc
-%dir %{_libexecdir}/gcc/powerpc-rtems4.10
-%dir %{_libexecdir}/gcc/powerpc-rtems4.10/%{gcc_version}
-%{_libexecdir}/gcc/powerpc-rtems4.10/%{gcc_version}/cc1plus%{_exeext}
+%dir %{_libexecdir}/gcc/powerpc-rtems
+%dir %{_libexecdir}/gcc/powerpc-rtems/%{gcc_version}
+%{_libexecdir}/gcc/powerpc-rtems/%{gcc_version}/cc1plus%{_exeext}
 
 
-%files -n rtems-4.10-powerpc-rtems4.10-gcc-libstdc++ -f build/files.g++
+%files -n rtems-4.6ng-powerpc-rtems-gcc-libstdc++ -f build/files.g++
 %defattr(-,root,root)
 %dir %{_prefix}
 %dir %{_gcclibdir}
 %dir %{_gcclibdir}/gcc
-%dir %{_gcclibdir}/gcc/powerpc-rtems4.10
-%dir %{_gcclibdir}/gcc/powerpc-rtems4.10/%{gcc_version}
-%dir %{_gcclibdir}/gcc/powerpc-rtems4.10/%{gcc_version}/include
-%{_gcclibdir}/gcc/powerpc-rtems4.10/%{gcc_version}/include/c++
+%dir %{_gcclibdir}/gcc/powerpc-rtems
+%dir %{_gcclibdir}/gcc/powerpc-rtems/%{gcc_version}
+%dir %{_gcclibdir}/gcc/powerpc-rtems/%{gcc_version}/include
+%{_gcclibdir}/gcc/powerpc-rtems/%{gcc_version}/include/c++
 
 
 
 # ==============================================================
-# rtems-4.10-powerpc-rtems4.10-newlib
+# rtems-4.6ng-powerpc-rtems-newlib
 # ==============================================================
-%package -n rtems-4.10-powerpc-rtems4.10-newlib
-Summary:      	C Library (newlib) for powerpc-rtems4.10
+%package -n rtems-4.6ng-powerpc-rtems-newlib
+Summary:      	C Library (newlib) for powerpc-rtems
 Group: 		Development/Tools
 License:	Distributable
 Version:	%{newlib_version}
-Release:        34%{?dist}
+Release:        %{newlib_release}%{?dist}
 %{?_with_noarch_subpackages:BuildArch: noarch}
 
-Requires:	rtems-4.10-newlib-common
+Requires:	rtems-4.6ng-newlib-common
 
-%description -n rtems-4.10-powerpc-rtems4.10-newlib
-Newlib C Library for powerpc-rtems4.10.
+%description -n rtems-4.6ng-powerpc-rtems-newlib
+Newlib C Library for powerpc-rtems.
 
-%files -n rtems-4.10-powerpc-rtems4.10-newlib -f build/files.newlib
+%files -n rtems-4.6ng-powerpc-rtems-newlib -f build/files.newlib
 %defattr(-,root,root)
 %dir %{_exec_prefix}
-%dir %{_exec_prefix}/powerpc-rtems4.10
-%{_exec_prefix}/powerpc-rtems4.10/include
+%dir %{_exec_prefix}/powerpc-rtems
+%{_exec_prefix}/powerpc-rtems/include
 
 # ==============================================================
-# rtems-4.10-newlib-common
+# rtems-4.6ng-newlib-common
 # ==============================================================
-%package -n rtems-4.10-newlib-common
+%package -n rtems-4.6ng-newlib-common
 Summary:	Base package for RTEMS newlib C Library
 Group:          Development/Tools
 Version:        %{newlib_version}
-Release:        34%{?dist}
+Release:        %{newlib_release}%{?dist}
 %{?_with_noarch_subpackages:BuildArch: noarch}
 License:	Distributable
 
 Requires(post): 	/sbin/install-info
 Requires(preun):	/sbin/install-info
 
-%description -n rtems-4.10-newlib-common
+%description -n rtems-4.6ng-newlib-common
 newlib files that are shared by all targets.
 
-%files -n rtems-4.10-newlib-common
+%files -n rtems-4.6ng-newlib-common
 %defattr(-,root,root)
 %dir %{_prefix}
 %dir %{_prefix}/share
@@ -899,16 +902,21 @@ newlib files that are shared by all targets.
 %{_infodir}/libc.info*
 %{_infodir}/libm.info*
 
-%post -n rtems-4.10-newlib-common
+%post -n rtems-4.6ng-newlib-common
   /sbin/install-info --info-dir=%{_infodir} %{_infodir}/libc.info.gz || :
   /sbin/install-info --info-dir=%{_infodir} %{_infodir}/libm.info.gz || :
 
-%preun -n rtems-4.10-newlib-common
+%preun -n rtems-4.6ng-newlib-common
 if [ $1 -eq 0 ]; then
   /sbin/install-info --delete --info-dir=%{_infodir} %{_infodir}/libc.info.gz || :
   /sbin/install-info --delete --info-dir=%{_infodir} %{_infodir}/libm.info.gz || :
 fi
 
 %changelog
+* Sat Jul 12 2014 Evgueni Souleimanov <esoule@100500.ca> - 4.4.7-6.0.3
+- Build gcc 4.4.7 for developing with rtems-4.6 (rtems-4.6ng)
+- place manpages to /opt/rtems-4.6ng/man
+- place info pages to /opt/rtems-4.6ng/info
+
 * Wed Nov 20 2013 RTEMS Project - 4.4.7-6
 - Original Package, as provided by RTEMS Project for RTEMS 4.10

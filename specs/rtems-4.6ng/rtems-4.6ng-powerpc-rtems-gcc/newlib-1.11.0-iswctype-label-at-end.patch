@@ -1,0 +1,24 @@
+Fix build error "error: label at end of compound statement"
+
+diff -urNp a/newlib/libc/ctype/iswctype.c b/newlib/libc/ctype/iswctype.c
+--- a/newlib/libc/ctype/iswctype.c	2002-09-20 16:13:10.000000000 -0400
++++ b/newlib/libc/ctype/iswctype.c	2014-07-06 20:09:48.000000000 -0400
+@@ -62,6 +62,7 @@ _DEFUN(iswctype,(c, desc), wint_t c _AND
+     case WC_XDIGIT:
+       return iswxdigit (c);
+     default:
++      break;
+     }
+ 
+   /* otherwise unknown */
+diff -urNp a/newlib/libc/ctype/wctype.c b/newlib/libc/ctype/wctype.c
+--- a/newlib/libc/ctype/wctype.c	2002-09-20 16:13:10.000000000 -0400
++++ b/newlib/libc/ctype/wctype.c	2014-07-06 20:10:34.000000000 -0400
+@@ -121,6 +121,7 @@ _DEFUN (_wctype_r, (r, c), 
+         return WC_XDIGIT;
+       break;
+     default:
++      break;
+     }
+ 
+   /* otherwise invalid */
