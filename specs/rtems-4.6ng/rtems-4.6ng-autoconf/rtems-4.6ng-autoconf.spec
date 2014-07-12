@@ -3,7 +3,7 @@
 # 	http://www.rtems.org/bugzilla
 #
 
-%define _prefix                 /opt/rtems-4.10
+%define _prefix                 /opt/rtems-4.6ng
 %define _exec_prefix            %{_prefix}
 %define _bindir                 %{_exec_prefix}/bin
 %define _sbindir                %{_exec_prefix}/sbin
@@ -15,8 +15,8 @@
 %define _localstatedir          %{_prefix}/var
 %define _includedir             %{_prefix}/include
 %define _libdir                 %{_exec_prefix}/%{_lib}
-%define _mandir                 %{_datarootdir}/man
-%define _infodir                %{_datarootdir}/info
+%define _mandir                 %{_prefix}/man
+%define _infodir                %{_prefix}/info
 %define _localedir              %{_datarootdir}/locale
 
 %ifos cygwin cygwin32 mingw mingw32
@@ -45,10 +45,10 @@
 %define _host_rpmprefix %{nil}
 %endif
 
-%define srcvers	2.68
-%define rpmvers %{expand:%(echo "2.68" | tr - _ )}
+%define srcvers	2.59
+%define rpmvers %{expand:%(echo "2.59" | tr - _ )}
 
-%define name			rtems-4.10-autoconf
+%define name			rtems-4.6ng-autoconf
 
 # --with alltests	enable all tests (default: off)
 %bcond_with		alltests
@@ -61,7 +61,7 @@ License:	GPL
 URL:		http://www.gnu.org/software/autoconf
 Group:		Development/Tools
 Version:	%{rpmvers}
-Release:	4%{?dist}
+Release:	4.0.1%{?dist}
 Summary:	Tool for automatically generating GNU style Makefile.in's
 
 BuildRoot:	%{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
@@ -217,5 +217,10 @@ fi
 %exclude %{_datadir}/emacs/site-lisp
 
 %changelog
+* Sat Jul 12 2014 Evgueni Souleimanov <esoule@100500.ca> - 2.59-4.0.1
+- Build autoconf 2.59 for developing with rtems-4.6 (rtems-4.6ng)
+- place manpages to /opt/rtems-4.6ng/man
+- place info pages to /opt/rtems-4.6ng/info
+
 * Tue Mar 19 2013 RTEMS Project - 2.68-4
 - Original Package, as provided by RTEMS Project for RTEMS 4.10
